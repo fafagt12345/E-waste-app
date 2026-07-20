@@ -725,6 +725,12 @@ export const dbService = {
 
     EStore.saveBookings(bookings);
 
+    // Dapatkan kategori dan damage multiplier yang benar untuk log transaksi
+    const categories = EStore.getCategories();
+    const damageLevels = EStore.getDamageLevels();
+    const matchedCategory = categories.find(c => booking.itemName?.toLowerCase().includes(c.name.split(" / ")[0].toLowerCase())) || categories[0];
+    const matchedDamage = damageLevels.find(d => d.name === booking.condition) || damageLevels[2]; // Default ke Rusak Sedang
+
     // Create a transaction record linked to this checkin
     await dbService.createTransaction({
       officerId,
@@ -733,10 +739,10 @@ export const dbService = {
       userName: booking.userName,
       itemType: booking.itemName || "E-Waste",
       brand: booking.brand || "Generik",
-      category: booking.itemName ? (booking.itemName.includes("Kipas") ? "Peralatan Rumah Tangga" : "Aksesoris & Kabel") : "Komputer / Laptop",
+      category: matchedCategory.name,
       weight: weightReceived,
       damageLevel: booking.condition || "Rusak Sedang",
-      damageMultiplier: 1.0,
+      damageMultiplier: matchedDamage.multiplier,
       points: pointsAwarded,
       photoUrl: officerPhotos[0] || booking.userPhotos?.[0] || "",
       carbonSaved,

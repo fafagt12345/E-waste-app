@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { dbService, EStore, Booking, WasteBankLocation, EItemCategory } from "../../services/db";
-import { 
-  CheckCircle2, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Search, 
-  FileImage, 
-  Camera, 
-  UploadCloud, 
-  Trash2, 
-  Eye, 
-  Sparkles, 
-  ArrowLeft, 
+import {
+  CheckCircle2,
+  Calendar,
+  Clock,
+  MapPin,
+  Search,
+  FileImage,
+  Camera,
+  UploadCloud,
+  Trash2,
+  Eye,
+  Sparkles,
+  ArrowLeft,
   ArrowRight,
   Send,
   Printer,
@@ -40,20 +40,20 @@ export function BookingCheckinPage() {
   // Checkin process states
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
   const [officerPhotos, setOfficerPhotos] = useState<PhotoItem[]>([]);
-  
+
   // Adjusted Fields by Officer
   const [itemName, setItemName] = useState("");
   const [brand, setBrand] = useState("");
   const [condition, setCondition] = useState("Rusak Sedang");
   const [weightKg, setWeightKg] = useState<number>(1.0);
-  
+
   // Camera simulator
   const [cameraOpen, setCameraOpen] = useState(false);
   const [simulatedFlash, setSimulatedFlash] = useState(false);
-  
+
   // Lightbox preview
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  
+
   // Complete Receipt
   const [receiptBooking, setReceiptBooking] = useState<any | null>(null);
 
@@ -63,7 +63,7 @@ export function BookingCheckinPage() {
       const data = await dbService.getBookings();
       // Show scheduled bookings
       const scheduled = data.filter((b) => b.status === "scheduled");
-      
+
       // Filter by officer location branch if assigned
       if (profile?.role === "petugas" && profile.locationId) {
         setBookings(scheduled.filter((b) => b.locationId === profile.locationId));
@@ -133,12 +133,12 @@ export function BookingCheckinPage() {
       if (progress >= 100) {
         progress = 100;
         clearInterval(interval);
-        setOfficerPhotos((prev) => 
+        setOfficerPhotos((prev) =>
           prev.map((p) => p.id === id ? { ...p, progress: 100, status: "success" } : p)
         );
         toast.success("Foto penerimaan diupload ke Cloudinary.");
       } else {
-        setOfficerPhotos((prev) => 
+        setOfficerPhotos((prev) =>
           prev.map((p) => p.id === id ? { ...p, progress } : p)
         );
       }
@@ -181,11 +181,11 @@ export function BookingCheckinPage() {
 
   // Math point calculations
   const categories = EStore.getCategories();
-  const matchedCat = categories.find(c => itemName.toLowerCase().includes(c.name.split(" / ")[0].toLowerCase()) || c.name.includes(itemName)) || categories[0];
+  const matchedCat = categories.find(c => itemName.toLowerCase().includes(c.name.split(" / ")[0].toLowerCase())) || categories.find(c => c.name.includes(itemName)) || categories[0];
   const basePrice = matchedCat ? matchedCat.basePrice : 100;
-  
+
   const damageLevels = EStore.getDamageLevels();
-  const matchedDmg = damageLevels.find(d => d.name === condition) || damageLevels[0];
+  const matchedDmg = damageLevels.find(d => d.name === condition) || damageLevels[2]; // Default ke Rusak Sedang
   const multiplier = matchedDmg ? matchedDmg.multiplier : 1.0;
 
   const pointsAwarded = Math.round(basePrice * weightKg * multiplier);
@@ -236,8 +236,8 @@ export function BookingCheckinPage() {
     window.print();
   };
 
-  const filteredBookings = bookings.filter(b => 
-    b.userName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredBookings = bookings.filter(b =>
+    b.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -251,9 +251,9 @@ export function BookingCheckinPage() {
           <h1 className="text-3xl font-extrabold text-slate-800">Pelayanan Booking Penyetoran</h1>
           <p className="text-sm text-slate-500 font-medium">Lakukan verifikasi, upload foto timbangan, dan check-in kedatangan sampah elektronik.</p>
         </div>
-        
+
         {activeBooking && (
-          <button 
+          <button
             onClick={() => setActiveBooking(null)}
             className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-wider flex items-center gap-1"
           >
@@ -280,7 +280,7 @@ export function BookingCheckinPage() {
               <h4 className="text-sm font-extrabold text-slate-800">E-Waste Smart Exchange</h4>
               <span className="text-[9px] font-semibold text-slate-500">DINAS LINGKUNGAN HIDUP (DLH)</span>
             </div>
-            
+
             <div className="space-y-2 text-slate-600">
               <div className="flex justify-between"><span>ID Booking:</span><strong className="text-slate-800 font-mono">{receiptBooking.id}</strong></div>
               <div className="flex justify-between"><span>Tanggal Setor:</span><span className="text-slate-800">{receiptBooking.date} ({receiptBooking.timeSlot})</span></div>
@@ -328,7 +328,7 @@ export function BookingCheckinPage() {
                 <h3 className="font-extrabold text-slate-800 text-sm mb-4">
                   Antrean Penyetoran Hari Ini {profile?.locationName ? `- ${profile.locationName}` : ""}
                 </h3>
-                
+
                 {loading ? (
                   <div className="space-y-3 animate-pulse">
                     <div className="h-10 bg-slate-100 rounded-xl" />
@@ -367,13 +367,13 @@ export function BookingCheckinPage() {
           ) : (
             /* WIZARD SERVICE check-in */
             <div className="grid gap-6 md:grid-cols-2">
-              
+
               {/* LEFT COLUMN: BEFORE PIC (USER SUBMITTED) */}
               <div className="rounded-3xl bg-white border border-slate-100 p-6 shadow-sm space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
                   <FileImage className="h-4 w-4 text-dlh-blue-600 animate-pulse" /> Foto Sebelum Penyetoran (User)
                 </h3>
-                
+
                 <div className="space-y-4">
                   <div className="p-3.5 bg-slate-50 rounded-2xl text-xs space-y-1">
                     <div>Penyetor: <strong className="text-slate-800">{activeBooking.userName}</strong></div>
@@ -547,7 +547,7 @@ export function BookingCheckinPage() {
               <span>📷 VIEWPORT TIMBANGAN PETUGAS</span>
               <button onClick={() => setCameraOpen(false)} className="text-slate-400 hover:text-white"><X size={18} /></button>
             </div>
-            
+
             <div className="relative aspect-video bg-black flex items-center justify-center text-white">
               {simulatedFlash && <div className="absolute inset-0 bg-white z-30 transition-opacity" />}
               <div className="absolute inset-4 border border-white/15 grid grid-cols-3 grid-rows-3 pointer-events-none" />
