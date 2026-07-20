@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/firebase/config"; // Path ini sekarang sudah benar
+import { auth, db } from "./config"; // Path diperbaiki untuk menunjuk ke file config.ts di root
 import { doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
