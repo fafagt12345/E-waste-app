@@ -68,13 +68,3 @@ export default function DashboardLayout() {
         </div>
     );
 }
-                </div >
-            </header >
-
-    {/* Konten Halaman */ }
-    < main className = "flex-1 p-6 bg-gray-50 overflow-y-auto" >
-        <Outlet /> {/* Di sinilah konten dari setiap halaman (misal: UserDashboard, ProfilePage) akan dirender */ }
-            </main >
-        </div >
-    );
-}
