@@ -110,6 +110,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
+        try {
+          await user.getIdToken(true);
+        } catch (e) {
+          console.warn("Unable to refresh auth token during startup:", e);
+        }
         await loadUserProfile(user);
       } else {
         const cached = sessionStorage.getItem("ew_session_profile");
@@ -135,6 +140,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      // Refresh token so any custom claims are available immediately
+      await user.getIdToken(true);
+
       // Cek apakah pengguna sudah ada di database
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
@@ -156,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithEmail = async (email: string, password: string) => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
+      await result.user.getIdToken(true);
       await loadUserProfile(result.user);
     } catch (firebaseErr) {
       console.warn("Firebase Auth offline/failed. Checking local mock database.");

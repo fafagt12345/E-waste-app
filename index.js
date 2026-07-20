@@ -71,7 +71,15 @@ exports.processTransaction = functions.region("asia-southeast2")
         }
 
         const { uid, token } = context.auth;
-        const userRole = token.role;
+        let userRole = token.role;
+        const userRef = db.collection("users").doc(uid);
+
+        if (!userRole) {
+            const currentUserDoc = await userRef.get();
+            if (currentUserDoc.exists) {
+                userRole = currentUserDoc.data().role;
+            }
+        }
 
         if (userRole !== "admin" && userRole !== "petugas") {
             throw new functions.https.HttpsError("permission-denied", "Anda tidak memiliki izin untuk melakukan aksi ini.");
