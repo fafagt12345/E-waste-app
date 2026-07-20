@@ -37,9 +37,17 @@ export default function DashboardLayout() {
                     <button onClick={handleNotificationClick} className="text-gray-600 hover:text-gray-900">
                         <Bell size={24} />
                     </button>
-                    <button onClick={handleProfileClick} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-                        <span className="font-semibold">{profile?.fullName}</span>
-                        <UserCircle size={28} />
+                    <button
+                        onClick={handleProfileClick}
+                        className="flex items-center gap-2 rounded-full p-1 pr-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                        aria-label="Buka profil pengguna"
+                    >
+                        {profile?.photoProfile ? (
+                            <img src={profile.photoProfile} alt="Foto Profil" className="h-8 w-8 rounded-full object-cover" />
+                        ) : (
+                            <UserCircle size={28} className="h-8 w-8" />
+                        )}
+                        <span className="font-semibold text-sm">{profile?.fullName}</span>
                     </button>
                 </div>
             </header>
