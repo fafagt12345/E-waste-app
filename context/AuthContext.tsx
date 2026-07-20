@@ -11,8 +11,31 @@ import {
   browserSessionPersistence,
 } from "firebase/auth";
 import { auth, db } from "../config";
-import { createUserDocument } from "../RegisterPage"; // Path diperbaiki untuk menunjuk ke file .jsx di root
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+
+/**
+ * Fungsi untuk membuat dokumen pengguna di Firestore.
+ * Dipindahkan ke sini untuk menghindari impor dari file .jsx yang bermasalah.
+ * @param {object} user - Objek pengguna dari Firebase Auth.
+ * @param {object} additionalData - Data tambahan dari form atau profil Google.
+ */
+export const createUserDocument = async (user: FirebaseUser, additionalData: any = {}) => {
+  if (!user) return;
+  const userRef = doc(db, "users", user.uid);
+
+  const userData = {
+    uid: user.uid,
+    email: user.email,
+    fullName: additionalData.fullName || user.displayName || "Pengguna Baru",
+    phone: additionalData.phone || user.phoneNumber || "",
+    address: additionalData.address || {},
+    role: "user",
+    status: "active",
+    createdAt: serverTimestamp(),
+  };
+
+  await setDoc(userRef, userData);
+};
 
 type Role = "admin" | "petugas" | "user";
 
