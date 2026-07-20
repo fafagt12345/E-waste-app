@@ -53,7 +53,7 @@ export const createUserDocument = async (user, additionalData = {}) => {
         fullName: additionalData.fullName || user.displayName || "Pengguna Baru",
         phone: additionalData.phone || user.phoneNumber || "",
         address: additionalData.address || {},
-        role: "user",
+        // role: "user", // Dihapus. Akan diatur oleh Cloud Function onUserCreate.
         status: "active",
         createdAt: new Date(),
         // Data lain seperti memberId, qrCode, dll akan ditambahkan oleh Cloud Function

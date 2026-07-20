@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the requesting user is an admin
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper function to check if the requesting user is a petugas (officer)
+    function isPetugas() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas';
+    }
+
+    // --- Collection Rules ---
+
+    // Users Collection:
+    // - Users can create their own profile.
+    // - Users can read and update their own profile.
+    // - Admins and Petugas can read any user's profile.
+    match /users/{userId} {
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() || isPetugas();
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      // No one can delete user documents from the client-side
+      allow delete: if false;
+    }
+
+    // Transactions Collection:
+    // - Only Petugas can create transactions.
+    // - Users can read their own transactions.
+    // - Admins and Petugas can read all transactions.
+    match /transactions/{transactionId} {
+      allow create: if isPetugas();
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin() || isPetugas();
+      allow update, delete: if isAdmin(); // Only admins can modify/delete transactions
+    }
+
+    // Bookings Collection:
+    // - Authenticated users can create their own bookings.
+    // - Users can read their own bookings.
+    // - Petugas can read all bookings and update their status.
+    match /bookings/{bookingId} {
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isPetugas() || isAdmin();
+      allow update: if isPetugas() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Publicly readable data (news, locations, categories, etc.)
+    // - Anyone can read.
+    // - Only admins can write/edit.
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /locations/{locationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // Add similar rules for categories, vouchers, etc.
+
+    // Settings & Audit Logs should be admin/server only
+    match /settings/{settingId} { allow read, write: if isAdmin(); }
+    match /audit_logs/{logId} { allow read, write: if isAdmin(); }
+  }
+}

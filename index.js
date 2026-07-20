@@ -48,11 +48,11 @@ exports.onUserCreate = functions.region("asia-southeast2")
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
 
-        // 4. Update dokumen pengguna dengan data baru
-        await userDocRef.update(additionalData);
-
-        // 5. Set Custom Claims untuk Role-Based Access Control
+        // 4. Set Custom Claims untuk Role-Based Access Control
         await admin.auth().setCustomUserClaims(uid, { role: "user" });
+
+        // 5. Update dokumen pengguna dengan data baru DAN role dari custom claim
+        await userDocRef.update({ ...additionalData, role: "user" });
 
         console.log(`Profil lengkap untuk user ${uid} berhasil dibuat dengan memberId: ${memberId}`);
         return null;
