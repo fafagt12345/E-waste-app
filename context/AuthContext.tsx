@@ -11,7 +11,7 @@ import {
   browserSessionPersistence,
 } from "firebase/auth";
 import { auth, db } from "../config";
-import { createUserDocument } from "@/pages/auth/RegisterPage"; // Impor fungsi dari RegisterPage
+import { createUserDocument } from "../RegisterPage"; // Path diperbaiki untuk menunjuk ke file .jsx di root
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 type Role = "admin" | "petugas" | "user";
