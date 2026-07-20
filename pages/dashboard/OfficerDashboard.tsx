@@ -25,6 +25,8 @@ export function OfficerDashboard() {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 5000); // Polling for real-time updates
+    return () => clearInterval(interval);
   }, []);
 
   // Today's Date String

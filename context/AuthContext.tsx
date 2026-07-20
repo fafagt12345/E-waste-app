@@ -7,6 +7,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   User as FirebaseUser,
+  setPersistence,
+  browserSessionPersistence,
 } from "firebase/auth";
 import { auth, db } from "../config";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -20,6 +22,8 @@ type UserProfile = {
   role: Role;
   points: number;
   photoProfile?: string;
+  phoneNumber?: string;
+  address?: string;
   createdAt?: any;
 };
 
@@ -28,7 +32,7 @@ type AuthContextValue = {
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string, phoneNumber?: string, address?: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -58,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           createdAt: data.createdAt,
         };
         setProfile(prof);
-        localStorage.setItem("ew_session_profile", JSON.stringify(prof));
+        sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
       } else {
         const prof: UserProfile = {
           uid: user.uid,
@@ -69,12 +73,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           photoProfile: user.photoURL || "",
         };
         setProfile(prof);
-        localStorage.setItem("ew_session_profile", JSON.stringify(prof));
+        sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
       }
     } catch (e) {
       console.warn("Firestore fetch error inside AuthProvider. Trying local cache.");
       // Fallback to local profile if document fetch fails
-      const cached = localStorage.getItem("ew_session_profile");
+      const cached = sessionStorage.getItem("ew_session_profile");
       if (cached) {
         setProfile(JSON.parse(cached));
       }
@@ -82,12 +86,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Set Firebase Auth to session-only persistence so different tabs can have different accounts
+    setPersistence(auth, browserSessionPersistence).catch(console.error);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
         await loadUserProfile(user);
       } else {
-        const cached = localStorage.getItem("ew_session_profile");
+        const cached = sessionStorage.getItem("ew_session_profile");
         if (cached) {
           try {
             setProfile(JSON.parse(cached));
@@ -121,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         photoProfile: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
       };
       setProfile(mockProfile);
-      localStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
+      sessionStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
     }
   };
 
@@ -144,20 +151,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           photoProfile: matched.photoProfile || ""
         };
         setProfile(mockProfile);
-        localStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
+        sessionStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
         return;
       }
       throw firebaseErr; // Re-throw if credentials mismatch local database
     }
   };
 
-  const register = async (email: string, password: string, fullName: string) => {
+  const register = async (email: string, password: string, fullName: string, phoneNumber?: string, address?: string) => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       const newDoc = {
         uid: result.user.uid,
         email,
         fullName,
+        phoneNumber: phoneNumber || "",
+        address: address || "",
         role: "user" as Role,
         points: 0,
         createdAt: serverTimestamp(),
@@ -173,6 +182,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: newUid,
         email,
         fullName,
+        phoneNumber: phoneNumber || "",
+        address: address || "",
         role: "user",
         points: 0,
         createdAt: new Date().toISOString()
@@ -184,11 +195,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: newUid,
         email,
         fullName,
+        phoneNumber: phoneNumber || "",
+        address: address || "",
         role: "user",
         points: 0
       };
       setProfile(mockProfile);
-      localStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
+      sessionStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
     }
   };
 
@@ -198,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn("Sign out of Firebase Auth failed.");
     }
-    localStorage.removeItem("ew_session_profile");
+    sessionStorage.removeItem("ew_session_profile");
     setProfile(null);
   };
 

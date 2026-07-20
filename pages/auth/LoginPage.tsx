@@ -166,45 +166,7 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* Demo Fast Login Shortcuts Panel */}
-        <div className="glass rounded-3xl p-6 shadow-xl border border-white/20 text-slate-800">
-          <p className="text-xs font-bold text-center uppercase tracking-wider text-slate-700 mb-3 flex items-center justify-center gap-2">
-            <Shield className="h-4 w-4 text-dlh-yellow-500" /> Demo Quick Access Role
-          </p>
-          <div className="grid grid-cols-4 gap-1.5">
-            <button
-              onClick={() => autofillDemo("admin")}
-              className="flex flex-col items-center justify-center p-2 rounded-xl bg-dlh-blue-50 hover:bg-dlh-blue-100 text-dlh-blue-800 border border-dlh-blue-200 transition-all text-center"
-            >
-              <Shield className="h-4 w-4 mb-1" />
-              <span className="text-[9px] font-bold">Admin</span>
-            </button>
-            <button
-              onClick={() => autofillDemo("petugas")}
-              className="flex flex-col items-center justify-center p-2 rounded-xl bg-dlh-green-50 hover:bg-dlh-green-100 text-dlh-green-800 border border-dlh-green-200 transition-all text-center"
-            >
-              <HardHat className="h-4 w-4 mb-1" />
-              <span className="text-[9px] font-bold">Petugas (loc-1)</span>
-            </button>
-            <button
-              onClick={() => autofillDemo("petugas2")}
-              className="flex flex-col items-center justify-center p-2 rounded-xl bg-dlh-green-50 hover:bg-dlh-green-100 text-dlh-green-800 border border-dlh-green-200 transition-all text-center"
-            >
-              <HardHat className="h-4 w-4 mb-1" />
-              <span className="text-[9px] font-bold">Petugas (loc-2)</span>
-            </button>
-            <button
-              onClick={() => autofillDemo("user")}
-              className="flex flex-col items-center justify-center p-2 rounded-xl bg-dlh-yellow-50 hover:bg-dlh-yellow-100 text-dlh-yellow-800 border border-dlh-yellow-200 transition-all text-center"
-            >
-              <UserCheck className="h-4 w-4 mb-1" />
-              <span className="text-[9px] font-bold">Penyetor</span>
-            </button>
-          </div>
-          <p className="text-[9px] text-center text-slate-500 mt-2">
-            Password: <strong>admin123 / petugas123 / user123</strong>
-          </p>
-        </div>
+
       </div>
     </div>
   );

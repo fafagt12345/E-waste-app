@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { User, Mail, Lock, Loader2, Recycle } from "lucide-react";
+import { User, Mail, Lock, Loader2, Recycle, Phone, MapPin } from "lucide-react";
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -9,6 +9,8 @@ export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -23,7 +25,7 @@ export function RegisterPage() {
     setError(null);
 
     try {
-      await register(email, password, fullName);
+      await register(email, password, fullName, phoneNumber, address);
       navigate("/login"); 
     } catch (err: any) {
       // Offline fallback registration support
@@ -42,6 +44,8 @@ export function RegisterPage() {
           uid: `user-${Date.now()}`,
           email,
           fullName,
+          phoneNumber,
+          address,
           role: "user" as const,
           points: 0,
           carbonReduced: 0,
@@ -98,6 +102,34 @@ export function RegisterPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nomor Telepon</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white/70 pl-12 pr-4 text-slate-900 placeholder:text-slate-400 focus:border-dlh-green-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-dlh-green-500/20 transition-all duration-200"
+                  placeholder="081234567890"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Alamat Lengkap</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="h-24 w-full rounded-2xl border border-slate-200 bg-white/70 pl-12 pr-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-dlh-green-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-dlh-green-500/20 transition-all duration-200 resize-none"
+                  placeholder="Masukkan alamat lengkap rumah Anda"
+                  required
+                />
+              </div>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Alamat Email</label>
               <div className="relative">

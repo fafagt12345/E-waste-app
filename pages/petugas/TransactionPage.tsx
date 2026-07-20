@@ -309,6 +309,7 @@ export function TransactionPage() {
               <div>
                 <span className="block text-xs font-semibold text-slate-400">Penyetor Terpilih</span>
                 <span className="block text-sm font-bold text-slate-800">{scannedUser?.fullName}</span>
+                <span className="block text-[10px] text-slate-500">{scannedUser?.phoneNumber || "No telepon tidak ada"} • {scannedUser?.address || "Alamat tidak ada"}</span>
               </div>
             </div>
 

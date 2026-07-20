@@ -56,17 +56,19 @@ export function AdminManagement() {
   const [filterLocationId, setFilterLocationId] = useState("");
 
   // Load all data
-  const loadData = () => {
-    setUsersList(EStore.getUsers());
-    setVouchersList(EStore.getVouchers());
+  const loadData = async () => {
+    setUsersList(await dbService.getUsers());
+    setVouchersList(await dbService.getVouchers());
     setCategoriesList(EStore.getCategories());
-    setLocationsList(EStore.getLocations());
-    setNewsList(EStore.getNews());
-    setBookingsList(EStore.getBookings());
+    setLocationsList(await dbService.getLocations());
+    setNewsList(await dbService.getAnnouncements());
+    setBookingsList(await dbService.getBookings());
   };
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 5000); // Polling for real-time updates
+    return () => clearInterval(interval);
   }, []);
 
   const handleOpenAddModal = () => {
@@ -390,7 +392,7 @@ export function AdminManagement() {
               <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                 <tr>
                   <th className="py-3 px-4 rounded-l-2xl">Nama Penyetor</th>
-                  <th className="py-3 px-4">Email</th>
+                  <th className="py-3 px-4">Info Kontak</th>
                   <th className="py-3 px-4">Saldo Poin</th>
                   <th className="py-3 px-4">Kontribusi Karbon</th>
                   <th className="py-3 px-4 text-center rounded-r-2xl">Aksi</th>
@@ -400,7 +402,11 @@ export function AdminManagement() {
                 {filteredUsers.map((u) => (
                   <tr key={u.uid} className="hover:bg-slate-50/50">
                     <td className="py-4 px-4 font-semibold text-slate-800">{u.fullName}</td>
-                    <td className="py-4 px-4 text-slate-500">{u.email}</td>
+                    <td className="py-4 px-4 text-slate-500 text-sm">
+                      <div className="font-medium">{u.email}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{u.phoneNumber || "No telepon tidak ada"}</div>
+                      <div className="text-xs text-slate-400 max-w-[200px] truncate" title={u.address}>{u.address || "Alamat tidak ada"}</div>
+                    </td>
                     <td className="py-4 px-4">
                       <span className="font-extrabold text-dlh-green-600 bg-dlh-green-50 px-3 py-1 rounded-full text-xs">
                         {u.points} Poin

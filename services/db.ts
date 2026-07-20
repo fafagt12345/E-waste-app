@@ -480,10 +480,13 @@ export const dbService = {
       snap.forEach((doc) => {
         users.push(doc.data() as UserProfile);
       });
-      if (users.length > 0) {
-        EStore.saveUsers(users);
-        return users;
-      }
+      const localUsers = EStore.getUsers();
+      const mergedMap = new Map();
+      localUsers.forEach(u => mergedMap.set(u.uid, u));
+      users.forEach(u => mergedMap.set(u.uid, u));
+      const finalUsers = Array.from(mergedMap.values());
+      EStore.saveUsers(finalUsers);
+      return finalUsers;
     } catch (e) {
       console.warn("Firestore users fetch failed. Falling back to local storage.", e);
     }
@@ -512,12 +515,14 @@ export const dbService = {
       snap.forEach((doc) => {
         txs.push(doc.data() as Transaction);
       });
-      if (txs.length > 0) {
-        // Sort newest first
-        txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        EStore.saveTransactions(txs);
-        return txs;
-      }
+      const localTxs = EStore.getTransactions();
+      const mergedMap = new Map();
+      localTxs.forEach(t => mergedMap.set(t.id, t));
+      txs.forEach(t => mergedMap.set(t.id, t));
+      const finalTxs = Array.from(mergedMap.values());
+      finalTxs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      EStore.saveTransactions(finalTxs);
+      return finalTxs;
     } catch (e) {
       console.warn("Firestore transactions fetch failed. Falling back to local storage.", e);
     }
