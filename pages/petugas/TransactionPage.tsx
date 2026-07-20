@@ -1,15 +1,15 @@
-import { useState, ChangeEvent } from "react";
-import { 
-  QrCode, 
-  UploadCloud, 
-  Send, 
-  CheckCircle2, 
-  User, 
-  Weight, 
-  Recycle, 
-  Loader2, 
-  Sparkles, 
-  TrendingUp, 
+import { useState, ChangeEvent, useEffect } from "react";
+import {
+  QrCode,
+  UploadCloud,
+  Send,
+  CheckCircle2,
+  User,
+  Weight,
+  Recycle,
+  Loader2,
+  Sparkles,
+  TrendingUp,
   Info,
   AlertTriangle,
   ArrowRight,
@@ -18,8 +18,8 @@ import {
   ChevronRight,
   HardHat,
   Barcode
-} from "lucide-react";
-import { dbService, EStore, UserProfile } from "../../services/db";
+} from "lucide-react"; import { doc, getDoc } from "firebase/firestore";
+import { db, dbService, EStore, UserProfile } from "../../services/db";
 import { aiService, AIVisionResult } from "../../services/aiService";
 import { toast, Toaster } from "sonner";
 
@@ -33,10 +33,11 @@ const PRESET_DEMO_IMAGES = [
 
 export function TransactionPage() {
   const [step, setStep] = useState<"scan" | "photo" | "analyzing" | "verify" | "receipt">("scan");
-  
+
   // Step 1: Scan States
   const [scannedUser, setScannedUser] = useState<UserProfile | null>(null);
   const [manualUid, setManualUid] = useState("");
+  const [isUserReady, setIsUserReady] = useState(false); // State baru untuk cek kesiapan user
 
   // Step 2: Photo States
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
@@ -44,15 +45,16 @@ export function TransactionPage() {
 
   // Step 3 & 4: AI & Verification States
   const [aiResult, setAiResult] = useState<AIVisionResult | null>(null);
-  
+
   // Officer Adjusted Fields
   const [itemType, setItemType] = useState("");
   const [brand, setBrand] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [damageLevelName, setDamageLevelName] = useState("");
   const [weightKg, setWeightKg] = useState<number>(1.0);
+  const [manualPoints, setManualPoints] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
-  
+
   // Scanner barcode simulator
   const [serialCode, setSerialCode] = useState("");
   const [scanningSerial, setScanningSerial] = useState(false);
@@ -61,17 +63,29 @@ export function TransactionPage() {
   const [finalTransaction, setFinalTransaction] = useState<any | null>(null);
 
   // QR scan triggers
-  const handleScanUser = (user: UserProfile) => {
+  const handleScanUser = async (user: UserProfile) => {
     setScannedUser(user);
-    toast.success(`User terdeteksi: ${user.fullName}`);
-    setStep("photo");
+    setIsUserReady(false); // Reset status kesiapan
+
+    // Cek langsung ke Firestore untuk data terbaru, terutama memberId
+    const userRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists() && userDoc.data().memberId) {
+      setIsUserReady(true);
+      toast.success(`User siap: ${user.fullName}`);
+      setStep("photo");
+    } else {
+      setIsUserReady(false);
+      toast.warning("Akun pengguna ini sedang difinalisasi. Member ID belum siap.");
+    }
   };
 
-  const handleManualLookup = () => {
-    const users = EStore.getUsers();
+  const handleManualLookup = async () => {
+    const users = await dbService.getUsers(); // Ambil data terbaru
     const found = users.find(u => u.uid === manualUid || u.email === manualUid);
     if (found) {
-      handleScanUser(found);
+      await handleScanUser(found);
     } else {
       toast.error("User tidak ditemukan. Gunakan quick-select.");
     }
@@ -81,10 +95,10 @@ export function TransactionPage() {
   const handleImageSelected = async (fileOrUrl: File | string) => {
     setCloudinaryUploading(true);
     setUploadedImageUrl("");
-    
+
     // Simulate Cloudinary uploading delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    
+
     let url = "";
     let name = "";
     if (typeof fileOrUrl === "string") {
@@ -98,7 +112,7 @@ export function TransactionPage() {
     setUploadedImageUrl(url);
     setCloudinaryUploading(false);
     toast.success("Foto berhasil diupload ke Cloudinary");
-    
+
     // Proceed to AI analysis
     triggerAIAnalysis(fileOrUrl);
   };
@@ -109,13 +123,13 @@ export function TransactionPage() {
     try {
       const result = await aiService.analyzeImage(fileOrUrl);
       setAiResult(result);
-      
+
       // Seed verification fields from AI
       setItemType(result.itemType);
       setBrand(result.brand);
       setCategoryName(result.category);
       setDamageLevelName(result.estimatedCondition);
-      
+
       setStep("verify");
       toast.success("Analisis AI Vision selesai");
     } catch (e) {
@@ -148,9 +162,9 @@ export function TransactionPage() {
   const basePrice = selectedCategory ? selectedCategory.basePrice : 100;
   const selectedDamage = EStore.getDamageLevels().find(d => d.name === damageLevelName);
   const multiplier = selectedDamage ? selectedDamage.multiplier : 1.0;
-  
+
   // Calculate points
-  const pointsAwarded = Math.round(basePrice * weightKg * multiplier);
+  const pointsAwarded = manualPoints ?? Math.round(basePrice * weightKg * multiplier);
 
   // Carbon Emission saved (simulated multiplier based on category)
   // Laptops = 8.0, Gadgets = 4.8, Home items = 2.5, Accessories = 1.0 kg CO2 / kg
@@ -164,7 +178,7 @@ export function TransactionPage() {
   // Submit transaction
   const handleSubmitTransaction = async () => {
     if (!scannedUser) return;
-    
+
     try {
       const tx = await dbService.createTransaction({
         officerId: "officer-uid",
@@ -182,7 +196,7 @@ export function TransactionPage() {
         carbonSaved,
         notes: notes + (serialCode ? ` (Serial: ${serialCode})` : "")
       });
-      
+
       setFinalTransaction(tx);
       setStep("receipt");
       toast.success("Transaksi berhasil dicatat & Poin ditransfer!");
@@ -201,6 +215,7 @@ export function TransactionPage() {
     setUploadedImageUrl("");
     setAiResult(null);
     setWeightKg(1.0);
+    setManualPoints(null);
     setNotes("");
     setSerialCode("");
     setFinalTransaction(null);
@@ -210,16 +225,16 @@ export function TransactionPage() {
   return (
     <div className="space-y-6 font-sans max-w-4xl mx-auto">
       <Toaster position="top-right" richColors />
-      
+
       {/* Title bar */}
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-800">Catat Penyetoran E-Waste</h1>
           <p className="text-sm text-slate-500 font-medium">Layanan timbang dan konversi poin otomatis dengan bantuan AI Vision.</p>
         </div>
-        
+
         {step !== "scan" && step !== "receipt" && (
-          <button 
+          <button
             onClick={handleReset}
             className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-wider flex items-center gap-1"
           >
@@ -240,7 +255,7 @@ export function TransactionPage() {
 
       {/* Steps Content Cards */}
       <div className="rounded-3xl bg-white border border-slate-100 p-8 shadow-sm">
-        
+
         {/* STEP 1: SCAN MEMBER */}
         {step === "scan" && (
           <div className="space-y-8">
@@ -291,7 +306,7 @@ export function TransactionPage() {
                 placeholder="ID Penyetor atau Email..."
                 className="h-11 flex-1 border border-slate-200 rounded-2xl px-4 text-sm focus:border-dlh-green-500 outline-none"
               />
-              <button 
+              <button
                 onClick={handleManualLookup}
                 className="h-11 px-5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-2xl text-xs flex items-center gap-1 transition-all"
               >
@@ -311,6 +326,17 @@ export function TransactionPage() {
                 <span className="block text-sm font-bold text-slate-800">{scannedUser?.fullName}</span>
                 <span className="block text-[10px] text-slate-500">{scannedUser?.phoneNumber || "No telepon tidak ada"} • {scannedUser?.address || "Alamat tidak ada"}</span>
               </div>
+              {!isUserReady && (
+                <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 flex items-start gap-2 text-xs">
+                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Akun Belum Siap</span>
+                    <p className="text-[10px] leading-tight">
+                      Minta penyetor untuk membuka halaman profil dan menekan tombol "Muat Ulang Data" hingga Member ID muncul.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="text-center max-w-md mx-auto space-y-2">
@@ -320,8 +346,8 @@ export function TransactionPage() {
 
             {/* Custom file upload box */}
             <div className="max-w-md mx-auto">
-              <label 
-                htmlFor="waste-photo-upload" 
+              <label
+                htmlFor="waste-photo-upload"
                 className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-dlh-green-500 hover:bg-dlh-green-50/20 transition-all"
               >
                 {cloudinaryUploading ? (
@@ -336,16 +362,16 @@ export function TransactionPage() {
                     <p className="mt-1 text-[10px] text-slate-500 font-semibold">Mendukung file JPG, PNG. Ukuran maks 5MB.</p>
                   </>
                 )}
-                <input 
-                  id="waste-photo-upload" 
-                  type="file" 
-                  accept="image/*" 
-                  disabled={cloudinaryUploading}
+                <input
+                  id="waste-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  disabled={cloudinaryUploading || !isUserReady}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleImageSelected(file);
-                  }} 
-                  className="sr-only" 
+                  }}
+                  className="sr-only"
                 />
               </label>
             </div>
@@ -357,7 +383,7 @@ export function TransactionPage() {
                 {PRESET_DEMO_IMAGES.map((img) => (
                   <button
                     key={img.name}
-                    disabled={cloudinaryUploading}
+                    disabled={cloudinaryUploading || !isUserReady}
                     onClick={() => handleImageSelected(img.url)}
                     className="flex flex-col items-center gap-1 bg-white border rounded-xl p-1.5 hover:border-dlh-green-500 hover:shadow-xs transition-all disabled:opacity-50"
                   >
@@ -508,6 +534,18 @@ export function TransactionPage() {
                   <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tulis catatan jika ada sasis pecah..." className="w-full h-10 border border-slate-200 rounded-xl px-3 text-xs focus:border-dlh-green-500 outline-none" />
                 </div>
 
+                {/* Manual Point Override */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Override Poin (Opsional)</label>
+                  <input
+                    type="number"
+                    value={manualPoints ?? ""}
+                    onChange={(e) => setManualPoints(e.target.value === "" ? null : parseInt(e.target.value))}
+                    placeholder="Masukkan poin manual jika perlu"
+                    className="w-full h-10 border border-amber-300 bg-amber-50 rounded-xl px-3 text-xs focus:border-amber-500 outline-none font-bold"
+                  />
+                </div>
+
                 {/* Point Math Box */}
                 <div className="rounded-2xl bg-dlh-green-50 border border-dlh-green-100 p-4 space-y-2">
                   <div className="flex justify-between items-center text-xs">
@@ -536,8 +574,8 @@ export function TransactionPage() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <button 
-                    onClick={() => setStep("photo")} 
+                  <button
+                    onClick={() => setStep("photo")}
                     className="w-1/3 h-11 border rounded-2xl text-slate-500 text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
                   >
                     <ArrowLeft className="h-4 w-4" /> Kembali

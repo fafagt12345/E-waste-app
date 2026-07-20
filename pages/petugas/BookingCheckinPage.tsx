@@ -20,7 +20,8 @@ import {
   X,
   Scale,
   Award
-} from "lucide-react";
+} from "lucide-react"; import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../config";
 import { toast, Toaster } from "sonner";
 
 interface PhotoItem {
@@ -46,6 +47,7 @@ export function BookingCheckinPage() {
   const [brand, setBrand] = useState("");
   const [condition, setCondition] = useState("Rusak Sedang");
   const [weightKg, setWeightKg] = useState<number>(1.0);
+  const [manualPoints, setManualPoints] = useState<number | null>(null);
 
   // Camera simulator
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -84,13 +86,23 @@ export function BookingCheckinPage() {
     }
   }, [profile]);
 
-  const handleStartCheckin = (booking: Booking) => {
+  const handleStartCheckin = async (booking: Booking) => {
     setActiveBooking(booking);
     setItemName(booking.itemName || "");
     setBrand(booking.brand || "");
     setCondition(booking.condition || "Rusak Sedang");
     setWeightKg(1.0);
+    setManualPoints(null);
     setOfficerPhotos([]);
+
+    // Cek kesiapan user
+    const userRef = doc(db, "users", booking.userId);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists() || !userDoc.data().memberId) {
+      toast.warning("Akun penyetor ini belum siap. Minta pengguna untuk me-refresh halaman profil mereka hingga Member ID muncul.");
+      setActiveBooking(null); // Batalkan proses jika user belum siap
+      return;
+    }
     toast.success(`Check-in dimulai untuk: ${booking.userName}`);
   };
 
@@ -210,7 +222,7 @@ export function BookingCheckinPage() {
   const matchedDmg = damageLevels.find(d => d.name === condition) || damageLevels[2]; // Default ke Rusak Sedang
   const multiplier = matchedDmg ? matchedDmg.multiplier : 1.0;
 
-  const pointsAwarded = Math.round(basePrice * weightKg * multiplier);
+  const pointsAwarded = manualPoints ?? Math.round(basePrice * weightKg * multiplier);
 
   // Carbon Emission saved (simulated multiplier based on category)
   let carbonFactor = 1.5;
@@ -231,6 +243,7 @@ export function BookingCheckinPage() {
         activeBooking.id,
         officerPhotos.map(p => p.url),
         weightKg,
+        manualPoints, // Kirim poin manual
         pointsAwarded,
         carbonSaved,
         profile?.uid || "officer-uid",
@@ -518,6 +531,18 @@ export function BookingCheckinPage() {
                           />
                         </div>
                       </div>
+                    </div>
+
+                    {/* Manual Point Override */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">Override Poin (Opsional)</label>
+                      <input
+                        type="number"
+                        value={manualPoints ?? ""}
+                        onChange={(e) => setManualPoints(e.target.value === "" ? null : parseInt(e.target.value))}
+                        placeholder="Masukkan poin jika perlu"
+                        className="w-full h-9 border border-amber-300 bg-amber-50 rounded-xl px-3 text-xs focus:border-amber-500 outline-none font-bold"
+                      />
                     </div>
 
                     {/* Point conversion preview */}
