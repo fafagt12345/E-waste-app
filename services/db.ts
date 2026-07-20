@@ -539,48 +539,36 @@ export const dbService = {
       status: "approved"
     };
 
-    // Update Local Transaction Log
-    const txs = EStore.getTransactions();
-    txs.unshift(newTx);
-    EStore.saveTransactions(txs);
+    // --- REFACTORED LOGIC ---
+    // Directly interact with Firestore for reliability
+    const userRef = doc(db, "users", tx.userId);
+    const transactionRef = doc(db, "transactions", newTx.id);
 
-    // Update User points & carbon footprint locally
-    const users = EStore.getUsers();
-    const uIdx = users.findIndex((u) => u.uid === tx.userId);
-    if (uIdx !== -1) {
-      users[uIdx].points += tx.points;
-      users[uIdx].carbonReduced += tx.carbonSaved;
-      // Recalculate Badges based on carbon and points
-      const badges = [...users[uIdx].badges];
-      if (users[uIdx].points >= 200 && !badges.includes("Eco Hero")) {
-        badges.push("Eco Hero");
-      }
-      if (users[uIdx].carbonReduced >= 20 && !badges.includes("Green Champion")) {
-        badges.push("Green Champion");
-      }
-      if (users[uIdx].points >= 500 && !badges.includes("Eco Warrior")) {
-        badges.push("Eco Warrior");
-      }
-      users[uIdx].badges = badges;
-      EStore.saveUsers(users);
-
-      // Save user profile state
-      try {
-        await updateDoc(doc(db, "users", tx.userId), {
-          points: users[uIdx].points,
-          carbonReduced: users[uIdx].carbonReduced,
-          badges: users[uIdx].badges
-        });
-      } catch (err) {
-        console.warn("User point sync to firestore failed", err);
-      }
-    }
-
-    // Try Firestore save
     try {
-      await setDoc(doc(db, "transactions", newTx.id), newTx);
-    } catch (e) {
-      console.warn("Firestore transaction create failed. Saved to local storage.", e);
+      // Get the latest user data from Firestore
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        throw new Error(`User with ID ${tx.userId} not found in Firestore.`);
+      }
+      const userData = userDoc.data();
+
+      // Calculate new points and carbon footprint
+      const newPoints = (userData.points || 0) + tx.points;
+      const newCarbonReduced = (userData.carbonReduced || 0) + tx.carbonSaved;
+
+      // Atomically update user points and create transaction log
+      await Promise.all([
+        updateDoc(userRef, {
+          points: newPoints,
+          carbonReduced: newCarbonReduced,
+        }),
+        setDoc(transactionRef, newTx)
+      ]);
+
+    } catch (error) {
+      console.error("Transaction creation failed:", error);
+      // Re-throw the error to be caught by the calling page
+      throw new Error("Gagal memperbarui poin pengguna atau mencatat transaksi di server.");
     }
 
     // Add Audit Log

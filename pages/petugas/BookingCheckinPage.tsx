@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { dbService, EStore, Booking, WasteBankLocation, EItemCategory } from "../../services/db";
 import {
@@ -49,7 +49,8 @@ export function BookingCheckinPage() {
 
   // Camera simulator
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [simulatedFlash, setSimulatedFlash] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Lightbox preview
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -145,38 +146,59 @@ export function BookingCheckinPage() {
     }, 300);
   };
 
-  const handleCaptureCamera = () => {
+  const handleOpenCamera = async () => {
     if (officerPhotos.length >= 5) {
       toast.warning("Maksimal 5 foto.");
       return;
     }
     setCameraOpen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      toast.error("Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.");
+      setCameraOpen(false);
+    }
   };
 
-  const executeSimulatedCapture = () => {
-    setSimulatedFlash(true);
-    setTimeout(() => {
-      setSimulatedFlash(false);
-      setCameraOpen(false);
+  const handleTakePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
-      const mockUrls = [
-        "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=500",
-        "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500"
-      ];
-      const randomUrl = mockUrls[Math.floor(Math.random() * mockUrls.length)];
-      const tempId = `off-photo-${Date.now()}`;
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const tempId = `off-photo-${Date.now()}`;
+          const tempUrl = URL.createObjectURL(blob);
+          const newPhoto: PhotoItem = {
+            id: tempId,
+            url: tempUrl,
+            label: "Foto Penerimaan",
+            progress: 10,
+            status: "uploading"
+          };
+          setOfficerPhotos((prev) => [...prev, newPhoto]);
+          simulateCloudinaryUpload(tempId, tempUrl); // Simulate upload for the captured photo
+        }
+      }, "image/jpeg");
 
-      const newPhoto: PhotoItem = {
-        id: tempId,
-        url: randomUrl,
-        label: "Foto Penerimaan",
-        progress: 10,
-        status: "uploading"
-      };
+      handleCloseCamera();
+    }
+  };
 
-      setOfficerPhotos((prev) => [...prev, newPhoto]);
-      simulateCloudinaryUpload(tempId, randomUrl);
-    }, 400);
+  const handleCloseCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setCameraOpen(false);
   };
 
   // Math point calculations
@@ -431,7 +453,7 @@ export function BookingCheckinPage() {
 
                     <button
                       type="button"
-                      onClick={handleCaptureCamera}
+                      onClick={handleOpenCamera}
                       className="flex h-16 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 hover:border-dlh-green-500 hover:bg-dlh-green-50/10 transition-all text-center"
                     >
                       <Camera className="h-4 w-4 text-slate-400" />
@@ -542,24 +564,24 @@ export function BookingCheckinPage() {
       {/* CAMERA SIMULATOR VIEWER MODAL */}
       {cameraOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-          <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl relative">
+          <div className="w-full max-w-lg bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl relative">
             <div className="p-4 border-b border-slate-800 text-white flex justify-between items-center text-xs font-bold">
               <span>📷 VIEWPORT TIMBANGAN PETUGAS</span>
-              <button onClick={() => setCameraOpen(false)} className="text-slate-400 hover:text-white"><X size={18} /></button>
+              <button onClick={handleCloseCamera} className="text-slate-400 hover:text-white"><X size={18} /></button>
             </div>
 
             <div className="relative aspect-video bg-black flex items-center justify-center text-white">
-              {simulatedFlash && <div className="absolute inset-0 bg-white z-30 transition-opacity" />}
-              <div className="absolute inset-4 border border-white/15 grid grid-cols-3 grid-rows-3 pointer-events-none" />
-              <div className="text-center space-y-2 p-4">
-                <Scale className="h-8 w-8 text-dlh-green-500 mx-auto animate-pulse" />
-                <span className="block text-xs font-bold text-slate-300">Pindai Timbangan Timbangan Digital</span>
-                <span className="block text-[9px] text-slate-500">Pastikan angka berat kg terbaca jelas oleh sensor</span>
-              </div>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="h-full w-full object-cover"
+              />
+              <canvas ref={canvasRef} className="hidden" />
             </div>
 
             <div className="p-4 bg-slate-950 flex justify-center">
-              <button onClick={executeSimulatedCapture} className="h-12 w-12 rounded-full border-4 border-white bg-red-600" />
+              <button onClick={handleTakePhoto} className="h-14 w-14 rounded-full border-4 border-white bg-red-600" />
             </div>
           </div>
         </div>
