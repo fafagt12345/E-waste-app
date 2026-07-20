@@ -27,7 +27,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
       allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() || isPetugas();
-      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       // No one can delete user documents from the client-side
       allow delete: if false;
     }
@@ -66,8 +66,8 @@ service cloud.firestore {
     }
     // Add similar rules for categories, vouchers, etc.
 
-    // Settings & Audit Logs should be admin/server only
+    // Settings should be admin only. Audit logs may be written by petugas and admins.
     match /settings/{settingId} { allow read, write: if isAdmin(); }
-    match /audit_logs/{logId} { allow read, write: if isAdmin(); }
+    match /audit_logs/{logId} { allow read, write: if isAdmin() || isPetugas(); }
   }
 }

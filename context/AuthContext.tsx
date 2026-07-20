@@ -167,24 +167,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await result.user.getIdToken(true);
       await loadUserProfile(result.user);
     } catch (firebaseErr) {
-      console.warn("Firebase Auth offline/failed. Checking local mock database.");
-      // Check local storage accounts
-      const localUsers = JSON.parse(localStorage.getItem("ew_users") || "[]");
-      const matched = localUsers.find((u: any) => u.email === email);
-      if (matched && password) {
-        const mockProfile: UserProfile = {
-          uid: matched.uid,
-          email: matched.email,
-          fullName: matched.fullName,
-          role: matched.role as Role,
-          points: matched.points || 0,
-          photoProfile: matched.photoProfile || ""
-        };
-        setProfile(mockProfile);
-        sessionStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
-        return;
-      }
-      throw firebaseErr; // Re-throw if credentials mismatch local database
+      console.warn("Firebase Auth login failed:", firebaseErr);
+      throw new Error("Login gagal. Pastikan Anda menggunakan akun Firebase yang valid dan memiliki koneksi internet.");
     }
   };
 
