@@ -11,6 +11,7 @@ import {
   browserSessionPersistence,
 } from "firebase/auth";
 import { auth, db } from "../config";
+import { createUserDocument } from "@/pages/auth/RegisterPage"; // Impor fungsi dari RegisterPage
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 type Role = "admin" | "petugas" | "user";
@@ -64,16 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(prof);
         sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
       } else {
-        const prof: UserProfile = {
-          uid: user.uid,
-          email: user.email,
-          fullName: user.displayName || "Pengguna Baru",
-          role: "user",
-          points: 0,
-          photoProfile: user.photoURL || "",
-        };
-        setProfile(prof);
-        sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
+        // Jika dokumen tidak ada (pengguna baru via Google), kita akan membuatnya
+        console.log(`User document for ${user.uid} not found. It will be created.`);
       }
     } catch (e) {
       console.warn("Firestore fetch error inside AuthProvider. Trying local cache.");
@@ -115,20 +108,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Cek apakah pengguna sudah ada di database
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      // Jika tidak ada, buat dokumen pengguna baru
+      if (!userDoc.exists()) {
+        console.log(`Creating new user document for ${user.displayName}`);
+        await createUserDocument(user); // Gunakan fungsi yang sudah diekspor
+      }
+
+      // Muat profil pengguna setelah login atau registrasi berhasil
       await loadUserProfile(result.user);
     } catch (err) {
-      console.warn("Google login failed, using demo fallback account.");
-      // Log in offline as user Rian Wijaya
-      const mockProfile: UserProfile = {
-        uid: "user-uid",
-        email: "user@ewaste.com",
-        fullName: "Rian Wijaya (Eco Hero)",
-        role: "user",
-        points: 480,
-        photoProfile: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
-      };
-      setProfile(mockProfile);
-      sessionStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
+      console.error("Google login failed:", err);
+      throw err; // Lemparkan error agar bisa ditangani di halaman login
     }
   };
 
