@@ -133,8 +133,8 @@ export function AdminManagement() {
               email: formEmail, 
               points: formPoints, 
               role: activeTab === "officers" ? "petugas" : formUserRole,
-              locationId: activeTab === "officers" ? formLocationId : undefined,
-              locationName: activeTab === "officers" ? (matchedLoc?.name || "") : undefined
+              locationId: (activeTab === "officers" || formUserRole === "petugas") ? formLocationId : undefined,
+              locationName: (activeTab === "officers" || formUserRole === "petugas") ? (matchedLoc?.name || "") : undefined
             };
             EStore.saveUsers(users);
             toast.success("Akun berhasil diperbarui");
@@ -663,8 +663,8 @@ export function AdminManagement() {
                     <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className="w-full h-10 border rounded-xl px-3 text-sm focus:border-dlh-green-500 outline-none" required />
                   </div>
                   
-                  {/* Select Branch Office specifically for Officers */}
-                  {activeTab === "officers" && (
+                  {/* Select Branch Office specifically for Officers or when Role is set to Petugas */}
+                  {(activeTab === "officers" || formUserRole === "petugas") && (
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1">Kantor Cabang / Penugasan Wilayah</label>
                       <select 
@@ -687,6 +687,7 @@ export function AdminManagement() {
                         <label className="block text-xs font-bold text-slate-600 mb-1">Hak Akses / Role</label>
                         <select value={formUserRole} onChange={(e) => setFormUserRole(e.target.value as any)} className="w-full h-10 border rounded-xl px-3 text-sm focus:border-dlh-green-500 outline-none">
                           <option value="user">User / Penyetor</option>
+                          <option value="petugas">Petugas Lapangan</option>
                           <option value="admin">Admin Dinas</option>
                         </select>
                       </div>
