@@ -37,6 +37,31 @@ const registerSchema = z.object({
     path: ["confirmPassword"],
 });
 
+/**
+ * Fungsi untuk membuat dokumen pengguna di Firestore.
+ * Dapat digunakan kembali untuk registrasi email dan registrasi via Google.
+ * @param {object} user - Objek pengguna dari Firebase Auth.
+ * @param {object} additionalData - Data tambahan dari form atau profil Google.
+ */
+export const createUserDocument = async (user, additionalData = {}) => {
+    if (!user) return;
+    const userRef = doc(db, "users", user.uid);
+
+    const userData = {
+        uid: user.uid,
+        email: user.email,
+        fullName: additionalData.fullName || user.displayName || "Pengguna Baru",
+        phone: additionalData.phone || user.phoneNumber || "",
+        address: additionalData.address || {},
+        role: "user",
+        status: "active",
+        createdAt: new Date(),
+        // Data lain seperti memberId, qrCode, dll akan ditambahkan oleh Cloud Function
+    };
+
+    await setDoc(userRef, userData);
+};
+
 export function RegisterPage() {
     const navigate = useNavigate();
     // const { toast } = useToast();
@@ -55,27 +80,8 @@ export function RegisterPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
-            // 2. Simpan data tambahan ke Firestore
-            // Catatan: Proses pembuatan memberId, QR code, dll, akan ditangani oleh Cloud Function
-            // yang terpicu oleh event `onCreate` user. Di sini kita hanya menyimpan data dari form.
-            await setDoc(doc(db, "users", user.uid), {
-                uid: user.uid,
-                email: values.email,
-                fullName: values.fullName,
-                phone: values.phone,
-                address: {
-                    province: values.province,
-                    city: values.city,
-                    district: values.district,
-                    village: values.village,
-                    fullAddress: values.fullAddress,
-                    postalCode: values.postalCode,
-                },
-                // Data lain akan ditambahkan oleh Cloud Function
-                role: "user",
-                status: "active",
-                createdAt: new Date(),
-            });
+            // 2. Gunakan fungsi createUserDocument untuk menyimpan data ke Firestore
+            await createUserDocument(user, values);
 
             // toast({ title: "Registrasi Berhasil", description: "Silakan login untuk melanjutkan." });
             alert("Registrasi Berhasil! Silakan login.");

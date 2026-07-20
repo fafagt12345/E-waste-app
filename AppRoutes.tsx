@@ -32,14 +32,6 @@ function DashboardRedirect() {
     return <Navigate to="/dashboard/user" replace />;
 }
 
-function DashboardRoutes() {
-    return (
-        <ProtectedRoute>
-            <DashboardLayout />
-        </ProtectedRoute>
-    )
-}
-
 function AppRoutes() {
     return (
         <AuthProvider>
@@ -50,29 +42,30 @@ function AppRoutes() {
                     <Route path="/daftar" element={<RegisterPage />} />
                     <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-                    {/* Rute yang Dilindungi (menggunakan DashboardLayout) */}
-                    <Route path="/" element={<DashboardRoutes />}>
+                    {/* Rute yang Dilindungi menggunakan Layout Dashboard */}
+                    <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+                        {/* Rute Indeks: Arahkan ke dashboard yang sesuai */}
                         <Route index element={<Navigate to="/dashboard" replace />} />
                         <Route path="dashboard" element={<DashboardRedirect />} />
-                        
+
                         {/* Admin Routes */}
-                        <Route path="dashboard/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
-                        <Route path="admin/management" element={<ProtectedRoute allowedRoles={["admin"]}><AdminManagement /></ProtectedRoute>} />
-                        <Route path="admin/reports" element={<ProtectedRoute allowedRoles={["admin"]}><AdminReports /></ProtectedRoute>} />
-                        <Route path="admin/settings" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSystem /></ProtectedRoute>} />
-                        
+                        <Route path="dashboard/admin" element={<AdminDashboard />} />
+                        <Route path="admin/management" element={<AdminManagement />} />
+                        <Route path="admin/reports" element={<AdminReports />} />
+                        <Route path="admin/settings" element={<AdminSystem />} />
+
                         {/* Petugas / Officer Routes */}
-                        <Route path="dashboard/petugas" element={<ProtectedRoute allowedRoles={["petugas"]}><OfficerDashboard /></ProtectedRoute>} />
-                        <Route path="petugas/transaction" element={<ProtectedRoute allowedRoles={["petugas"]}><TransactionPage /></ProtectedRoute>} />
-                        <Route path="petugas/checkin" element={<ProtectedRoute allowedRoles={["petugas"]}><BookingCheckinPage /></ProtectedRoute>} />
-                        
+                        <Route path="dashboard/petugas" element={<OfficerDashboard />} />
+                        <Route path="petugas/transaction" element={<TransactionPage />} />
+                        <Route path="petugas/checkin" element={<BookingCheckinPage />} />
+
                         {/* User / Penyetor Routes */}
-                        <Route path="dashboard/user" element={<ProtectedRoute allowedRoles={["user"]}><UserDashboard /></ProtectedRoute>} />
-                        <Route path="user/profile" element={<ProtectedRoute allowedRoles={["user"]}><ProfilePage /></ProtectedRoute>} />
-                        <Route path="user/submit-item" element={<ProtectedRoute allowedRoles={["user"]}><SubmitItemPage /></ProtectedRoute>} />
-                        <Route path="user/vouchers" element={<ProtectedRoute allowedRoles={["user"]}><VoucherRedeemPage /></ProtectedRoute>} />
-                        <Route path="user/education" element={<ProtectedRoute allowedRoles={["user"]}><EducationPage /></ProtectedRoute>} />
-                        <Route path="user/map" element={<ProtectedRoute allowedRoles={["user"]}><WasteBankMapPage /></ProtectedRoute>} />
+                        <Route path="dashboard/user" element={<UserDashboard />} />
+                        <Route path="user/profile" element={<ProfilePage />} />
+                        <Route path="user/submit-item" element={<SubmitItemPage />} />
+                        <Route path="user/vouchers" element={<VoucherRedeemPage />} />
+                        <Route path="user/education" element={<EducationPage />} />
+                        <Route path="user/map" element={<WasteBankMapPage />} />
                     </Route>
 
                     {/* Halaman fallback untuk rute yang tidak cocok */}

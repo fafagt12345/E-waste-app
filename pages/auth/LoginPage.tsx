@@ -34,10 +34,7 @@ export function LoginPage() {
       await loginWithGoogle();
       navigate("/dashboard");
     } catch (err: any) {
-      setError("Gagal login dengan Google. Menggunakan akun demo.");
-      // Fallback user for demo
-      setEmail("user@ewaste.com");
-      setPassword("user123");
+      setError(err.message || "Gagal login dengan Google. Silakan coba lagi.");
     } finally {
       setLoading("idle");
     }
@@ -73,7 +70,7 @@ export function LoginPage() {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-dlh-green-500 via-dlh-green-600 to-dlh-blue-600 text-white shadow-lg shadow-dlh-green-600/30">
               <Recycle className="h-9 w-9 animate-spin-slow" />
             </div>
-            
+
             <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 bg-gradient-to-r from-dlh-green-700 to-dlh-blue-700 bg-clip-text text-transparent">
               E-Waste Smart Exchange
             </h1>
