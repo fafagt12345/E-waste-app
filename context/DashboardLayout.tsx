@@ -32,7 +32,7 @@ export default function DashboardLayout() {
     return (
         <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
             {/* Sidebar */}
-            <div className="hidden border-r bg-white lg:block">
+            <div className="hidden border-r border-slate-200 lg:block">
                 <SidebarMenu />
             </div>
 
