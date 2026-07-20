@@ -58,6 +58,7 @@ type AuthContextValue = {
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string, phoneNumber?: string, address?: string) => Promise<void>;
   logout: () => Promise<void>;
+  reloadProfile: () => Promise<void>; // Tambahkan fungsi ini
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -234,8 +235,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
   };
 
+  const reloadProfile = async () => {
+    if (auth.currentUser) {
+      console.log("Reloading user profile from Firestore...");
+      await loadUserProfile(auth.currentUser);
+    }
+  };
+
   const value = useMemo(
-    () => ({ profile, loading, loginWithGoogle, loginWithEmail, register, logout }),
+    () => ({ profile, loading, loginWithGoogle, loginWithEmail, register, logout, reloadProfile }),
     [profile, loading],
   );
 

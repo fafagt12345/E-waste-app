@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { db, storage } from "../../config";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { User, Mail, Phone, MapPin, Loader2, Camera } from "lucide-react";
+import { User, Mail, Phone, MapPin, Loader2, Camera, QrCode, RefreshCw, AlertCircle } from "lucide-react";
 
 export function ProfilePage() {
   const { profile, loading: authLoading, reloadProfile } = useAuth();
@@ -13,6 +13,9 @@ export function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [memberId, setMemberId] = useState<string | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -24,8 +27,22 @@ export function ProfilePage() {
       setFullName(profile.fullName);
       setPhoneNumber(profile.phoneNumber || "");
       setAddress(profile.address || "");
+
+      // Cek memberId langsung dari firestore karena mungkin belum ada di context
+      const checkMemberId = async () => {
+        const userDocRef = doc(db, "users", profile.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setMemberId(data.memberId || null);
+          setQrCodeUrl(data.qrCode || null);
+        }
+      };
+      checkMemberId();
     }
   }, [profile]);
+
+  // ... (fungsi handlePhotoUpload tetap sama)
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -72,6 +89,19 @@ export function ProfilePage() {
     );
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await reloadProfile();
+    // Setelah reload, useEffect akan berjalan lagi dan memperbarui state
+    setTimeout(() => {
+      setIsRefreshing(false);
+      // Cek ulang memberId setelah refresh
+      if (profile && !memberId) {
+        toast.info("Data profil diperbarui. Jika Member ID masih kosong, tunggu beberapa saat lagi.");
+      }
+    }, 1500);
+  };
+
   const handleUpdateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!profile) {
@@ -107,6 +137,33 @@ export function ProfilePage() {
     <div className="bg-white p-8 rounded-lg shadow-md max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-2">Edit Profil</h1>
       <p className="text-gray-500 mb-6">Perbarui informasi pribadi Anda di sini.</p>
+
+      {memberId && qrCodeUrl ? (
+        <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-8">
+          <img src={qrCodeUrl} alt="QR Code Member" className="h-28 w-28 rounded-lg border bg-white" />
+          <div className="text-center sm:text-left">
+            <span className="text-xs font-semibold text-slate-500">Member ID Anda</span>
+            <p className="text-lg font-extrabold text-slate-800 font-mono tracking-wider">{memberId}</p>
+            <p className="text-xs text-slate-500 mt-1">Tunjukkan QR Code ini kepada petugas saat melakukan transaksi.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 mb-8 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-bold">Member ID Belum Siap</h4>
+            <p className="text-xs mt-1">Akun Anda sedang dalam proses finalisasi. Member ID dan QR Code akan segera muncul. Silakan coba muat ulang data.</p>
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="mt-3 inline-flex items-center gap-2 text-xs font-bold bg-white text-amber-800 border border-amber-300 px-3 py-1.5 rounded-lg hover:bg-amber-100 disabled:opacity-50"
+            >
+              {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Muat Ulang Data
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col items-center space-y-4 mb-8">
         <div className="relative">
