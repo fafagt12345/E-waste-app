@@ -84,7 +84,7 @@ export function ProfilePage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Lengkap</tabel>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Lengkap</label>
           <div className="relative">
             <MapPin className="absolute left-3 top-4 text-gray-400" size={20} />
             <textarea value={address} onChange={(e) => setAddress(e.target.value)} className="w-full pl-10 p-3 border rounded-md h-24 resize-none focus:ring-dlh-green-500 focus:border-dlh-green-500" />
