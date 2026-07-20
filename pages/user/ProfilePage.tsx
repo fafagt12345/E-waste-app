@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { db, storage } from "../../config";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { toast } from "sonner";
 import { User, Mail, Phone, MapPin, Loader2, Camera, QrCode, RefreshCw, AlertCircle } from "lucide-react";
 
 export function ProfilePage() {
@@ -96,7 +97,7 @@ export function ProfilePage() {
     setTimeout(() => {
       setIsRefreshing(false);
       // Cek ulang memberId setelah refresh
-      if (profile && !memberId) {
+      if (profile) {
         toast.info("Data profil diperbarui. Jika Member ID masih kosong, tunggu beberapa saat lagi.");
       }
     }, 1500);

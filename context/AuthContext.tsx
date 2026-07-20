@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Selalu coba ambil data terbaru dari Firestore
       const profileDoc = await getDoc(doc(db, "users", user.uid));
       if (profileDoc.exists()) {
         const data = profileDoc.data();
@@ -88,18 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setProfile(prof);
         sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
-      } else {
-        // Jika dokumen tidak ada (pengguna baru via Google), kita akan membuatnya
-        console.log(`User document for ${user.uid} not found. It will be created.`);
+        return; // Keluar jika berhasil
       }
     } catch (e) {
-      console.warn("Firestore fetch error inside AuthProvider. Trying local cache.");
-      // Fallback to local profile if document fetch fails
-      const cached = sessionStorage.getItem("ew_session_profile");
-      if (cached) {
-        setProfile(JSON.parse(cached));
-      }
+      console.error("Firestore fetch error:", e);
+      // Jika Firestore gagal, jangan langsung fallback, biarkan error ditangani
     }
+    console.warn(`User document for ${user.uid} not found in Firestore.`);
   };
 
   useEffect(() => {
