@@ -1,17 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { db } from "../../config";
+import { db, storage } from "../../config";
 import { doc, updateDoc } from "firebase/firestore";
-import { User, Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { User, Mail, Phone, MapPin, Loader2, Camera } from "lucide-react";
 
 export function ProfilePage() {
-  const { profile, loading: authLoading } = useAuth();
+  const { profile, loading: authLoading, reloadProfile } = useAuth();
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mengisi form dengan data profil saat komponen dimuat
   useEffect(() => {
@@ -21,6 +26,51 @@ export function ProfilePage() {
       setAddress(profile.address || "");
     }
   }, [profile]);
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile) return;
+
+    if (file.size > 5 * 1024 * 1024) { // Batas 5MB
+      setError("Ukuran foto tidak boleh lebih dari 5MB.");
+      return;
+    }
+
+    const storageRef = ref(storage, `profile_pictures/${profile.uid}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    setUploading(true);
+    setError(null);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error("Upload failed:", error);
+        setError("Gagal mengunggah foto. Silakan coba lagi.");
+        setUploading(false);
+      },
+      async () => {
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          const userDocRef = doc(db, "users", profile.uid);
+          await updateDoc(userDocRef, { photoProfile: downloadURL });
+
+          // Muat ulang profil untuk memperbarui UI
+          await reloadProfile();
+
+          setSuccess("Foto profil berhasil diperbarui!");
+        } catch (updateError) {
+          setError("Gagal menyimpan URL foto baru.");
+        } finally {
+          setUploading(false);
+        }
+      }
+    );
+  };
 
   const handleUpdateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -57,6 +107,32 @@ export function ProfilePage() {
     <div className="bg-white p-8 rounded-lg shadow-md max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-2">Edit Profil</h1>
       <p className="text-gray-500 mb-6">Perbarui informasi pribadi Anda di sini.</p>
+
+      <div className="flex flex-col items-center space-y-4 mb-8">
+        <div className="relative">
+          <img
+            src={profile?.photoProfile || `https://ui-avatars.com/api/?name=${profile?.fullName}&background=22c55e&color=fff&size=128`}
+            alt="Foto Profil"
+            className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute -bottom-2 -right-2 h-10 w-10 bg-gradient-to-r from-dlh-green-600 to-dlh-blue-600 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white hover:scale-110 transition-transform"
+            aria-label="Ubah foto profil"
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="animate-spin" size={18} /> : <Camera size={18} />}
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handlePhotoUpload}
+            className="hidden"
+            accept="image/png, image/jpeg"
+          />
+        </div>
+        {uploading && <div className="text-sm font-semibold text-gray-600">Mengunggah: {Math.round(uploadProgress)}%</div>}
+      </div>
 
       <form onSubmit={handleUpdateProfile} className="space-y-6">
         <div>
