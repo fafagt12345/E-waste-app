@@ -10,12 +10,18 @@ service cloud.firestore {
 
     // Helper function to check if the requesting user is an admin
     function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
     // Helper function to check if the requesting user is a petugas (officer)
     function isPetugas() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas';
+      return isAuthenticated() && (
+        request.auth.token.role == 'petugas' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas'
+      );
     }
 
     // --- Collection Rules ---
