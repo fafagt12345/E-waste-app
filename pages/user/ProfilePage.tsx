@@ -97,7 +97,7 @@ export function ProfilePage() {
     setTimeout(() => {
       setIsRefreshing(false);
       // Cek ulang memberId setelah refresh
-      if (profile) {
+      if (profile && !memberId) {
         toast.info("Data profil diperbarui. Jika Member ID masih kosong, tunggu beberapa saat lagi.");
       }
     }, 1500);

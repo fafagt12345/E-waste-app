@@ -89,13 +89,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setProfile(prof);
         sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
-        return; // Keluar jika berhasil
+        return;
       }
     } catch (e) {
-      console.error("Firestore fetch error:", e);
-      // Jika Firestore gagal, jangan langsung fallback, biarkan error ditangani
+      console.warn("Firestore fetch error, trying to use session cache.", e);
+      // Fallback to session cache if Firestore fails
+      const cached = sessionStorage.getItem("ew_session_profile");
+      if (cached) {
+        setProfile(JSON.parse(cached));
+        return;
+      }
     }
-    console.warn(`User document for ${user.uid} not found in Firestore.`);
+    console.error(`Failed to load user profile for ${user.uid} from both Firestore and cache.`);
   };
 
   useEffect(() => {
