@@ -19,7 +19,7 @@ import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoadingSpinner from "./components/LoadingSpinner";
-import DashboardLayout from "./components/DashboardLayout";
+import DashboardLayout from "./context/DashboardLayout";
 
 function DashboardRedirect() {
     const { profile, loading } = useAuth();
