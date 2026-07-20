@@ -18,8 +18,10 @@ import {
   ChevronRight,
   HardHat,
   Barcode
-} from "lucide-react"; import { doc, getDoc } from "firebase/firestore";
-import { db, dbService, EStore, UserProfile } from "../../services/db";
+} from "lucide-react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../config";
+import { dbService, EStore, UserProfile } from "../../services/db";
 import { aiService, AIVisionResult } from "../../services/aiService";
 import { toast, Toaster } from "sonner";
 

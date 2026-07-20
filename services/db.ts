@@ -696,6 +696,7 @@ export const dbService = {
     bookingId: string,
     officerPhotos: string[],
     weightReceived: number,
+    // manualPoints: number | null, // This was the error, it's not needed here
     pointsAwarded: number,
     carbonSaved: number,
     officerId: string,

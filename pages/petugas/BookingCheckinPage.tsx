@@ -20,7 +20,8 @@ import {
   X,
   Scale,
   Award
-} from "lucide-react"; import { doc, getDoc } from "firebase/firestore";
+} from "lucide-react";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config";
 import { toast, Toaster } from "sonner";
 
@@ -243,7 +244,6 @@ export function BookingCheckinPage() {
         activeBooking.id,
         officerPhotos.map(p => p.url),
         weightKg,
-        manualPoints, // Kirim poin manual
         pointsAwarded,
         carbonSaved,
         profile?.uid || "officer-uid",
