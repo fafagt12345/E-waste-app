@@ -2,12 +2,15 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
     LayoutDashboard,
-    User,
     Upload,
     Ticket,
     BookOpen,
     Map,
     LogOut,
+    Briefcase,
+    BarChart3,
+    Settings,
+    Truck,
 } from "lucide-react";
 
 const userMenu = [
@@ -18,9 +21,18 @@ const userMenu = [
     { to: "/user/map", text: "Peta Bank Sampah", icon: Map },
 ];
 
-// Anda bisa menambahkan menu untuk admin dan petugas di sini
-// const adminMenu = [ ... ];
-// const officerMenu = [ ... ];
+const adminMenu = [
+    { to: "/dashboard/admin", text: "Dashboard", icon: LayoutDashboard },
+    { to: "/admin/management", text: "Manajemen Data", icon: Briefcase },
+    { to: "/admin/reports", text: "Laporan", icon: BarChart3 },
+    { to: "/admin/settings", text: "Pengaturan Sistem", icon: Settings },
+];
+
+const officerMenu = [
+    { to: "/dashboard/petugas", text: "Dashboard", icon: LayoutDashboard },
+    { to: "/petugas/transaction", text: "Transaksi Baru", icon: Ticket },
+    { to: "/petugas/checkin", text: "Check-in Booking", icon: Truck },
+];
 
 const NavItem = ({ to, text, icon: Icon }: { to: string, text: string, icon: React.ElementType }) => (
     <NavLink
@@ -42,9 +54,14 @@ export default function SidebarMenu() {
     const { profile, logout } = useAuth();
 
     // Tentukan menu berdasarkan peran pengguna
-    const menuItems = profile?.role === "user" ? userMenu : [];
-    // if (profile?.role === 'admin') menuItems = adminMenu;
-    // if (profile?.role === 'petugas') menuItems = officerMenu;
+    let menuItems = [];
+    if (profile?.role === "user") {
+        menuItems = userMenu;
+    } else if (profile?.role === "admin") {
+        menuItems = adminMenu;
+    } else if (profile?.role === "petugas") {
+        menuItems = officerMenu;
+    }
 
     return (
         <div className="flex h-full max-h-screen flex-col gap-2 bg-gradient-to-b from-slate-900 to-slate-800">
