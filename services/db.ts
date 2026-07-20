@@ -531,52 +531,6 @@ export const dbService = {
     return txs;
   },
 
-  createTransaction: async (tx: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
-    const newTx: Transaction = {
-      ...tx,
-      id: `tx-${Date.now()}`,
-      date: new Date().toISOString(),
-      status: "approved"
-    };
-
-    // --- REFACTORED LOGIC ---
-    // Directly interact with Firestore for reliability
-    const userRef = doc(db, "users", tx.userId);
-    const transactionRef = doc(db, "transactions", newTx.id);
-
-    try {
-      // Get the latest user data from Firestore
-      const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) {
-        throw new Error(`User with ID ${tx.userId} not found in Firestore.`);
-      }
-      const userData = userDoc.data();
-
-      // Calculate new points and carbon footprint
-      const newPoints = (userData.points || 0) + tx.points;
-      const newCarbonReduced = (userData.carbonReduced || 0) + tx.carbonSaved;
-
-      // Atomically update user points and create transaction log
-      await Promise.all([
-        updateDoc(userRef, {
-          points: newPoints,
-          carbonReduced: newCarbonReduced,
-        }),
-        setDoc(transactionRef, newTx)
-      ]);
-
-    } catch (error) {
-      console.error("Transaction creation failed:", error);
-      // Re-throw the error to be caught by the calling page
-      throw new Error("Gagal memperbarui poin pengguna atau mencatat transaksi di server.");
-    }
-
-    // Add Audit Log
-    await dbService.addAuditLog(tx.officerId, tx.officerName, "petugas", "Input Transaksi", `Mencatat setoran e-waste ${tx.itemType} (${tx.weight} kg) untuk user ${tx.userName}.`);
-
-    return newTx;
-  },
-
   // VOUCHERS & REDEMPTIONS
   getVouchers: async (): Promise<Voucher[]> => {
     try {
@@ -712,13 +666,12 @@ export const dbService = {
     booking.weightReceived = weightReceived;
     booking.pointsAwarded = pointsAwarded;
 
-    EStore.saveBookings(bookings);
-
     // Dapatkan kategori dan damage multiplier yang benar untuk log transaksi
     const categories = EStore.getCategories();
     const damageLevels = EStore.getDamageLevels();
     const matchedCategory = categories.find(c => booking.itemName?.toLowerCase().includes(c.name.split(" / ")[0].toLowerCase())) || categories[0];
     const matchedDamage = damageLevels.find(d => d.name === booking.condition) || damageLevels[2]; // Default ke Rusak Sedang
+    const photoUrl = officerPhotos[0] || booking.userPhotos?.[0] || "";
 
     // Create a transaction record linked to this checkin
     await dbService.createTransaction({
@@ -733,22 +686,53 @@ export const dbService = {
       damageLevel: booking.condition || "Rusak Sedang",
       damageMultiplier: matchedDamage.multiplier,
       points: pointsAwarded,
-      photoUrl: officerPhotos[0] || booking.userPhotos?.[0] || "",
+      photoUrl: photoUrl,
       carbonSaved,
       notes: `Penerimaan dari Booking ${bookingId}`
     });
 
-    // Add Audit Log
-    await dbService.addAuditLog(
-      officerId,
-      officerName,
-      "petugas",
-      "Check-in Booking",
-      `Memproses check-in booking ${bookingId} untuk user ${booking.userName}. Poin disalurkan: ${pointsAwarded} P.`
-    );
+    EStore.saveBookings(bookings);
 
     return booking;
   },
+
+  /**
+   * REFACTORED: Calls a Cloud Function to process the transaction securely.
+   * The function will handle user point updates and transaction creation.
+   */
+  createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
+    try {
+      // Lazy-load getFunctions to avoid circular dependencies if not careful
+      const { getFunctions, httpsCallable } = await import("firebase/functions");
+      const functions = getFunctions();
+      const processTransaction = httpsCallable(functions, 'processTransaction');
+
+      const result = await processTransaction(txData);
+      const newTx = result.data as Transaction;
+
+      // --- Update local state AFTER successful server operation ---
+      // Update user in local storage
+      const users = EStore.getUsers();
+      const userIdx = users.findIndex(u => u.uid === newTx.userId);
+      if (userIdx !== -1) {
+        const currentUser = users[userIdx];
+        currentUser.points = (currentUser.points || 0) + newTx.points;
+        currentUser.carbonReduced = (currentUser.carbonReduced || 0) + newTx.carbonSaved;
+        EStore.saveUsers(users);
+      }
+
+      // Add transaction to local storage
+      const transactions = EStore.getTransactions();
+      transactions.unshift(newTx);
+      EStore.saveTransactions(transactions);
+
+      return newTx;
+    } catch (error) {
+      console.error("Cloud Function 'processTransaction' failed:", error);
+      throw new Error("Gagal memproses transaksi di server. Silakan coba lagi.");
+    }
+  },
+
 
   // ANNOUNCEMENTS & NEWS
   getAnnouncements: async (): Promise<Announcement[]> => {
