@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E-Waste Smart Exchange</title>
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error("Diagnostic error caught:", e);
+        var errDiv = document.createElement('div');
+        errDiv.style.position = 'fixed';
+        errDiv.style.top = '0';
+        errDiv.style.left = '0';
+        errDiv.style.width = '100%';
+        errDiv.style.height = '100%';
+        errDiv.style.backgroundColor = '#7f1d1d';
+        errDiv.style.color = '#fecaca';
+        errDiv.style.zIndex = '999999';
+        errDiv.style.padding = '30px';
+        errDiv.style.fontFamily = 'monospace';
+        errDiv.style.whiteSpace = 'pre-wrap';
+        errDiv.style.overflow = 'auto';
+        errDiv.innerHTML = '<h1 style="color:#f87171;font-size:24px;margin-bottom:15px;">Diagnostic: Runtime JavaScript Error</h1>' +
+          '<strong>Message:</strong> ' + e.message + '<br/><br/>' +
+          '<strong>File:</strong> ' + e.filename + ':' + e.lineno + ':' + e.colno + '<br/><br/>' +
+          '<strong>Stack Trace:</strong><br/>' + (e.error ? e.error.stack : 'N/A');
+        
+        // Ensure body is loaded before appending
+        if (document.body) {
+          document.body.appendChild(errDiv);
+        } else {
+          window.addEventListener('DOMContentLoaded', function() {
+            document.body.appendChild(errDiv);
+          });
+        }
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error("Diagnostic promise rejection caught:", e);
+        var errDiv = document.createElement('div');
+        errDiv.style.position = 'fixed';
+        errDiv.style.top = '0';
+        errDiv.style.left = '0';
+        errDiv.style.width = '100%';
+        errDiv.style.height = '100%';
+        errDiv.style.backgroundColor = '#7f1d1d';
+        errDiv.style.color = '#fecaca';
+        errDiv.style.zIndex = '999999';
+        errDiv.style.padding = '30px';
+        errDiv.style.fontFamily = 'monospace';
+        errDiv.style.whiteSpace = 'pre-wrap';
+        errDiv.style.overflow = 'auto';
+        errDiv.innerHTML = '<h1 style="color:#f87171;font-size:24px;margin-bottom:15px;">Diagnostic: Unhandled Promise Rejection</h1>' +
+          '<strong>Reason:</strong> ' + (e.reason ? (e.reason.message || e.reason) : 'Unknown') + '<br/><br/>' +
+          '<strong>Stack Trace:</strong><br/>' + (e.reason && e.reason.stack ? e.reason.stack : 'N/A');
+        
+        if (document.body) {
+          document.body.appendChild(errDiv);
+        } else {
+          window.addEventListener('DOMContentLoaded', function() {
+            document.body.appendChild(errDiv);
+          });
+        }
+      });
+    </script>
+    <!-- Leaflet CSS for waste bank interactive map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script type="module" crossorigin src="/assets/index-PI8DAICt.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DwslOgwt.css">
+</head>
+
+<body>
+    <div id="root"></div>
+    <!-- Leaflet JS for interactive map -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</body>
+
+</html>
