@@ -531,6 +531,42 @@ export const dbService = {
     return txs;
   },
 
+  /**
+   * REFACTORED: Calls a Cloud Function to process the transaction securely.
+   * The function will handle user point updates and transaction creation.
+   */
+  createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
+    try {
+      // Lazy-load getFunctions to avoid circular dependencies if not careful
+      const { getFunctions, httpsCallable } = await import("firebase/functions");
+      const functions = getFunctions();
+      const processTransaction = httpsCallable(functions, 'processTransaction');
+
+      const result = await processTransaction(txData);
+      const newTx = result.data as Transaction;
+
+      // --- Update local state AFTER successful server operation ---
+      // Update user in local storage
+      const users = EStore.getUsers();
+      const userIdx = users.findIndex(u => u.uid === newTx.userId);
+      if (userIdx !== -1) {
+        users[userIdx].points = (users[userIdx].points || 0) + newTx.points;
+        users[userIdx].carbonReduced = (users[userIdx].carbonReduced || 0) + newTx.carbonSaved;
+        EStore.saveUsers(users);
+      }
+
+      // Add transaction to local storage
+      const transactions = EStore.getTransactions();
+      transactions.unshift(newTx);
+      EStore.saveTransactions(transactions);
+
+      return newTx;
+    } catch (error) {
+      console.error("Cloud Function 'processTransaction' failed:", error);
+      throw new Error("Gagal memproses transaksi di server. Silakan coba lagi.");
+    }
+  },
+
   // VOUCHERS & REDEMPTIONS
   getVouchers: async (): Promise<Voucher[]> => {
     try {
@@ -694,43 +730,6 @@ export const dbService = {
     EStore.saveBookings(bookings);
 
     return booking;
-  },
-
-  /**
-   * REFACTORED: Calls a Cloud Function to process the transaction securely.
-   * The function will handle user point updates and transaction creation.
-   */
-  createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
-    try {
-      // Lazy-load getFunctions to avoid circular dependencies if not careful
-      const { getFunctions, httpsCallable } = await import("firebase/functions");
-      const functions = getFunctions();
-      const processTransaction = httpsCallable(functions, 'processTransaction');
-
-      const result = await processTransaction(txData);
-      const newTx = result.data as Transaction;
-
-      // --- Update local state AFTER successful server operation ---
-      // Update user in local storage
-      const users = EStore.getUsers();
-      const userIdx = users.findIndex(u => u.uid === newTx.userId);
-      if (userIdx !== -1) {
-        const currentUser = users[userIdx];
-        currentUser.points = (currentUser.points || 0) + newTx.points;
-        currentUser.carbonReduced = (currentUser.carbonReduced || 0) + newTx.carbonSaved;
-        EStore.saveUsers(users);
-      }
-
-      // Add transaction to local storage
-      const transactions = EStore.getTransactions();
-      transactions.unshift(newTx);
-      EStore.saveTransactions(transactions);
-
-      return newTx;
-    } catch (error) {
-      console.error("Cloud Function 'processTransaction' failed:", error);
-      throw new Error("Gagal memproses transaksi di server. Silakan coba lagi.");
-    }
   },
 
 
