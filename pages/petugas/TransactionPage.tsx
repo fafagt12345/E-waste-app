@@ -100,11 +100,13 @@ export function TransactionPage() {
     setUploadedImageUrl("");
 
     let finalUrl = "";
+    let fileToAnalyze: File | string = fileOrUrl;
     try {
       if (typeof fileOrUrl === "string") {
         // Mock camera capture
         await new Promise((resolve) => setTimeout(resolve, 1500));
         finalUrl = fileOrUrl;
+        fileToAnalyze = fileOrUrl;
       } else {
         // Real Cloudinary upload
         finalUrl = await uploadToCloudinary(fileOrUrl);
@@ -117,11 +119,11 @@ export function TransactionPage() {
       setCloudinaryUploading(false);
       return;
     }
-    
+
     setCloudinaryUploading(false);
 
     // Proceed to AI analysis
-    triggerAIAnalysis(finalUrl);
+    triggerAIAnalysis(fileToAnalyze);
   };
 
   // AI analysis triggers

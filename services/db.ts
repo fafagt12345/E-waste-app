@@ -1,5 +1,5 @@
 import { db, functions } from "../config";
-import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
 // Define Roles
@@ -448,6 +448,83 @@ export class EStore {
 // FIREBASE FIRESTORE ADAPTER (with offline-fallback & localStorage syncing)
 // -------------------------------------------------------------
 export const dbService = {
+  // REALTIME SUBSCRIPTIONS
+  subscribeUsers: (callback: (users: UserProfile[]) => void) => {
+    return onSnapshot(collection(db, "users"), (snap) => {
+      const users: UserProfile[] = [];
+      snap.forEach((doc) => users.push(doc.data() as UserProfile));
+      const localUsers = EStore.getUsers();
+      const mergedMap = new Map();
+      localUsers.forEach(u => mergedMap.set(u.uid, u));
+      users.forEach(u => mergedMap.set(u.uid, u));
+      const finalUsers = Array.from(mergedMap.values());
+      EStore.saveUsers(finalUsers);
+      callback(finalUsers);
+    }, (error) => {
+      console.warn("Subscribe users error:", error);
+      callback(EStore.getUsers());
+    });
+  },
+
+  subscribeTransactions: (callback: (txs: Transaction[]) => void) => {
+    return onSnapshot(collection(db, "transactions"), (snap) => {
+      const txs: Transaction[] = [];
+      snap.forEach((doc) => txs.push(doc.data() as Transaction));
+      const localTxs = EStore.getTransactions();
+      const mergedMap = new Map();
+      localTxs.forEach(t => mergedMap.set(t.id, t));
+      txs.forEach(t => mergedMap.set(t.id, t));
+      const finalTxs = Array.from(mergedMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      EStore.saveTransactions(finalTxs);
+      callback(finalTxs);
+    }, (error) => {
+      console.warn("Subscribe transactions error:", error);
+      callback(EStore.getTransactions());
+    });
+  },
+
+  subscribeBookings: (callback: (bookings: Booking[]) => void) => {
+    return onSnapshot(collection(db, "bookings"), (snap) => {
+      const list: Booking[] = [];
+      snap.forEach((doc) => list.push(doc.data() as Booking));
+      if (list.length > 0) {
+        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        EStore.saveBookings(list);
+        callback(list);
+      } else {
+        const local = EStore.getBookings();
+        local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        callback(local);
+      }
+    }, (error) => {
+      console.warn("Subscribe bookings error:", error);
+      const local = EStore.getBookings();
+      local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      callback(local);
+    });
+  },
+
+  subscribeAnnouncements: (callback: (news: Announcement[]) => void) => {
+    return onSnapshot(collection(db, "announcements"), (snap) => {
+      const list: Announcement[] = [];
+      snap.forEach((doc) => list.push(doc.data() as Announcement));
+      if (list.length > 0) {
+        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        EStore.saveNews(list);
+        callback(list);
+      } else {
+        const local = EStore.getNews();
+        local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        callback(local);
+      }
+    }, (error) => {
+      console.warn("Subscribe announcements error:", error);
+      const local = EStore.getNews();
+      local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      callback(local);
+    });
+  },
+
   // AUDIT LOGGING
   addAuditLog: async (userId: string, userName: string, role: string, action: string, details: string) => {
     const newLog: AuditLog = {
