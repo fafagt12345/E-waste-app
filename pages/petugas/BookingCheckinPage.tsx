@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { dbService, EStore, Booking, WasteBankLocation, EItemCategory } from "../../services/db";
+import { dbService, EStore, Booking, Transaction, WasteBankLocation, EItemCategory } from "../../services/db";
+import { uploadToCloudinary } from "../../services/uploadService";
 import {
   CheckCircle2,
   Calendar,
@@ -136,27 +137,27 @@ export function BookingCheckinPage() {
       };
 
       setOfficerPhotos((prev) => [...prev, newPhoto]);
-      simulateCloudinaryUpload(tempId, tempUrl);
+      processCloudinaryUpload(tempId, file);
     }
   };
 
-  const simulateCloudinaryUpload = (id: string, url: string) => {
-    let progress = 10;
-    const interval = setInterval(() => {
-      progress += Math.floor(Math.random() * 20) + 15;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        setOfficerPhotos((prev) =>
-          prev.map((p) => p.id === id ? { ...p, progress: 100, status: "success" } : p)
-        );
-        toast.success("Foto penerimaan diupload ke Cloudinary.");
-      } else {
+  const processCloudinaryUpload = async (id: string, file: File | Blob) => {
+    try {
+      const secureUrl = await uploadToCloudinary(file, (progress) => {
         setOfficerPhotos((prev) =>
           prev.map((p) => p.id === id ? { ...p, progress } : p)
         );
-      }
-    }, 300);
+      });
+      setOfficerPhotos((prev) =>
+        prev.map((p) => p.id === id ? { ...p, url: secureUrl, progress: 100, status: "success" } : p)
+      );
+      toast.success("Foto penerimaan diupload ke Cloudinary.");
+    } catch (err: any) {
+      toast.error(err.message || "Gagal mengunggah foto penerimaan.");
+      setOfficerPhotos((prev) =>
+        prev.map((p) => p.id === id ? { ...p, status: "failed" } : p)
+      );
+    }
   };
 
   const handleOpenCamera = async () => {
@@ -198,7 +199,7 @@ export function BookingCheckinPage() {
             status: "uploading"
           };
           setOfficerPhotos((prev) => [...prev, newPhoto]);
-          simulateCloudinaryUpload(tempId, tempUrl); // Simulate upload for the captured photo
+          processCloudinaryUpload(tempId, blob); // Real upload for the captured photo
         }
       }, "image/jpeg");
 

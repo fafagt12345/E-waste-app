@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config";
-import { dbService, EStore, UserProfile } from "../../services/db";
-import { aiService, AIVisionResult } from "../../services/aiService";
+import { EStore, UserProfile, EItemCategory, dbService } from "../../services/db";
+import { aiService } from "../../services/aiService";
+import { uploadToCloudinary } from "../../services/uploadService";
 import { toast, Toaster } from "sonner";
 
 // Preset images for easy demo selection
@@ -93,30 +94,34 @@ export function TransactionPage() {
     }
   };
 
-  // Cloudinary / Photo Upload simulation
+  // Cloudinary / Photo Upload
   const handleImageSelected = async (fileOrUrl: File | string) => {
     setCloudinaryUploading(true);
     setUploadedImageUrl("");
 
-    // Simulate Cloudinary uploading delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    let finalUrl = "";
+    try {
+      if (typeof fileOrUrl === "string") {
+        // Mock camera capture
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        finalUrl = fileOrUrl;
+      } else {
+        // Real Cloudinary upload
+        finalUrl = await uploadToCloudinary(fileOrUrl);
+      }
 
-    let url = "";
-    let name = "";
-    if (typeof fileOrUrl === "string") {
-      url = fileOrUrl;
-      name = fileOrUrl.split("/").pop() || "demo.jpg";
-    } else {
-      url = URL.createObjectURL(fileOrUrl);
-      name = fileOrUrl.name;
+      setUploadedImageUrl(finalUrl);
+      toast.success("Foto berhasil diupload ke Cloudinary");
+    } catch (e: any) {
+      toast.error(e.message || "Gagal upload foto");
+      setCloudinaryUploading(false);
+      return;
     }
-
-    setUploadedImageUrl(url);
+    
     setCloudinaryUploading(false);
-    toast.success("Foto berhasil diupload ke Cloudinary");
 
     // Proceed to AI analysis
-    triggerAIAnalysis(fileOrUrl);
+    triggerAIAnalysis(finalUrl);
   };
 
   // AI analysis triggers

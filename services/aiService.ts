@@ -34,88 +34,52 @@ const BRANDS = ["Samsung", "Xiaomi", "Oppo", "Vivo", "Apple", "Asus", "Acer", "L
 const CONDITIONS = ["Masih Berfungsi", "Rusak Ringan", "Rusak Sedang", "Rusak Berat", "Mati Total"];
 
 export const aiService = {
-  /**
-   * Simulates/Sends image to AI Vision.
-   * If a real Gemini API key was integrated we would fetch here, otherwise we return a realistic simulated analysis.
-   */
   analyzeImage: async (imageFileOrUrl: File | string): Promise<AIVisionResult> => {
-    // Artificial 2.5 second delay to simulate API calculation
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-
-    // Determine name/type from filename if available, to make simulator look smart!
-    let fileName = "";
+    // Determine URL. If it's a file, it means we must upload it to Cloudinary first.
+    // However, aiService should ideally receive the already uploaded Cloudinary URL 
+    // to pass to our Vercel Serverless Function because Vercel Serverless Function 
+    // has strict payload size limits (4MB) and passing base64 from client could exceed it.
+    let imageUrl = "";
     if (typeof imageFileOrUrl === "string") {
-      fileName = imageFileOrUrl.toLowerCase();
-    } else if (imageFileOrUrl instanceof File) {
-      fileName = imageFileOrUrl.name.toLowerCase();
-    }
-
-    let detectedItem = "Laptop";
-    let detectedBrand = "Asus";
-    let detectedCategory = "Komputer / Laptop";
-
-    // Dynamic heuristics based on filename
-    if (fileName.includes("hp") || fileName.includes("phone") || fileName.includes("samsung") || fileName.includes("xiaomi") || fileName.includes("oppo") || fileName.includes("vivo")) {
-      detectedItem = "Smartphone";
-      detectedBrand = fileName.includes("samsung") ? "Samsung" : fileName.includes("xiaomi") ? "Xiaomi" : fileName.includes("oppo") ? "Oppo" : "Apple";
-      detectedCategory = "Gadget / Handphone";
-    } else if (fileName.includes("kabel") || fileName.includes("cable") || fileName.includes("charger") || fileName.includes("adaptor")) {
-      detectedItem = "Kabel & Adaptor Charger";
-      detectedBrand = "Sony";
-      detectedCategory = "Aksesoris & Kabel";
-    } else if (fileName.includes("tv") || fileName.includes("monitor") || fileName.includes("layar")) {
-      detectedItem = "Monitor TV";
-      detectedBrand = "LG";
-      detectedCategory = "Media Player & TV";
-    } else if (fileName.includes("kipas") || fileName.includes("fan")) {
-      detectedItem = "Kipas Angin";
-      detectedBrand = "Cosmos";
-      detectedCategory = "Peralatan Rumah Tangga";
-    } else if (fileName.includes("setrika") || fileName.includes("iron")) {
-      detectedItem = "Setrika";
-      detectedBrand = "Philips";
-      detectedCategory = "Peralatan Rumah Tangga";
-    } else if (fileName.includes("kulkas") || fileName.includes("fridge")) {
-      detectedItem = "Kulkas";
-      detectedBrand = "Sharp";
-      detectedCategory = "Peralatan Rumah Tangga";
-    } else if (fileName.includes("printer") || fileName.includes("print")) {
-      detectedItem = "Printer";
-      detectedBrand = "Epson";
-      detectedCategory = "Komputer / Laptop";
+      imageUrl = imageFileOrUrl;
+      if (imageUrl.startsWith("blob:")) {
+         throw new Error("Blob URLs cannot be analyzed by the server. Please upload to Cloudinary first.");
+      }
     } else {
-      // Pick random ones
-      const items = ["Laptop", "Smartphone", "Keyboard", "Setrika", "Kipas Angin", "CPU"];
-      detectedItem = items[Math.floor(Math.random() * items.length)];
-      detectedBrand = BRANDS[Math.floor(Math.random() * BRANDS.length)];
-      detectedCategory = CATEGORY_MAP[detectedItem] || "Aksesoris & Kabel";
+       throw new Error("aiService expects a Cloudinary URL, not a File object. Please upload the file first.");
     }
 
-    // Determine random condition and confidence
-    const randomCondition = CONDITIONS[Math.floor(Math.random() * CONDITIONS.length)];
-    const confidenceScore = Math.floor(75 + Math.random() * 23); // 75% to 98%
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ imageUrl })
+      });
 
-    let description = "";
-    if (randomCondition === "Masih Berfungsi") {
-      description = `Kondisi fisik luar terlihat utuh dan bersih. Tidak ada indikasi keretakan atau patah. Perangkat menyala normal.`;
-    } else if (randomCondition === "Rusak Ringan") {
-      description = `Terdapat goresan halus di bodi luar. Port konektor sedikit berdebu namun masih berfungsi dengan baik.`;
-    } else if (randomCondition === "Rusak Sedang") {
-      description = `Terlihat goresan kasar pada casing dan sedikit retakan di bagian sudut. Beberapa tombol tidak responsif.`;
-    } else if (randomCondition === "Rusak Berat") {
-      description = `Casing luar pecah signifikan. Beberapa komponen internal tampak longgar/hilang. Korosi ringan terdeteksi.`;
-    } else {
-      description = `Perangkat mati total, tidak merespon daya. Terdapat tanda-tanda korosi parah atau bekas terbakar di sirkuit luar.`;
+      if (!response.ok) {
+        let errorMsg = "Gagal memproses gambar melalui AI.";
+        try {
+          const errData = await response.json();
+          if (errData.error) errorMsg = errData.error;
+        } catch (e) {}
+        throw new Error(errorMsg);
+      }
+
+      const result = await response.json();
+      return {
+        itemType: result.itemType || "E-Waste",
+        brand: result.brand || "Generik",
+        category: result.category || "Gadget / Handphone",
+        estimatedCondition: result.estimatedCondition || "Rusak Sedang",
+        description: result.description || "Dianalisis oleh AI",
+        confidenceScore: result.confidenceScore || 85
+      };
+    } catch (err: any) {
+      console.error("AI Analysis Error:", err);
+      throw err;
     }
-
-    return {
-      itemType: detectedItem,
-      brand: detectedBrand,
-      category: detectedCategory,
-      estimatedCondition: randomCondition,
-      description,
-      confidenceScore
-    };
   },
 
   /**

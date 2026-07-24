@@ -659,19 +659,43 @@ export const dbService = {
 
   // BOOKINGPENYETORAN
   getBookings: async (): Promise<Booking[]> => {
-    return EStore.getBookings();
+    try {
+      const snap = await getDocs(collection(db, "bookings"));
+      const list: Booking[] = [];
+      snap.forEach((doc) => {
+        list.push(doc.data() as Booking);
+      });
+      if (list.length > 0) {
+        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        EStore.saveBookings(list);
+        return list;
+      }
+    } catch (e) {
+      console.warn("Firestore bookings fetch failed. Using local storage.", e);
+    }
+    const list = EStore.getBookings();
+    list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return list;
   },
 
   createBooking: async (booking: Omit<Booking, "id" | "status">): Promise<Booking> => {
-    const bookings = EStore.getBookings();
     const newBooking: Booking = {
       ...booking,
       id: `b-${Date.now()}`,
       status: "scheduled",
       officerPhotos: []
     };
+
+    const bookings = EStore.getBookings();
     bookings.unshift(newBooking);
     EStore.saveBookings(bookings);
+
+    try {
+      await setDoc(doc(db, "bookings", newBooking.id), newBooking);
+    } catch (e) {
+      console.warn("Firestore save booking failed.", e);
+      throw new Error("Gagal menyimpan ke database. Pastikan koneksi internet stabil.");
+    }
 
     // Add Audit Log
     await dbService.addAuditLog(booking.userId, booking.userName, "user", "Booking Penyetoran", `Membuat jadwal penyetoran e-waste pada ${booking.date} (${booking.timeSlot}) di ${booking.locationName}.`);

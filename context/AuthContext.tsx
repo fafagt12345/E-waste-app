@@ -93,14 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) {
       console.warn("Firestore fetch error, trying to use session cache.", e);
-      // Fallback to session cache if Firestore fails
-      const cached = sessionStorage.getItem("ew_session_profile");
-      if (cached) {
-        setProfile(JSON.parse(cached));
-        return;
-      }
     }
-    console.error(`Failed to load user profile for ${user.uid} from both Firestore and cache.`);
+    
+    // Fallback to session cache if Firestore fails or document doesn't exist yet
+    const cached = sessionStorage.getItem("ew_session_profile");
+    if (cached) {
+      setProfile(JSON.parse(cached));
+      return;
+    }
+    console.warn(`Profile for ${user.uid} not found in Firestore and no cache available yet.`);
   };
 
   useEffect(() => {
@@ -166,9 +167,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await result.user.getIdToken(true);
       await loadUserProfile(result.user);
-    } catch (firebaseErr) {
+    } catch (firebaseErr: any) {
       console.warn("Firebase Auth login failed:", firebaseErr);
-      throw new Error("Login gagal. Pastikan Anda menggunakan akun Firebase yang valid dan memiliki koneksi internet.");
+      // Melempar error dengan kode aslinya agar dapat dibedakan di UI
+      throw firebaseErr; 
     }
   };
 
@@ -186,36 +188,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: serverTimestamp(),
       };
       await setDoc(doc(db, "users", result.user.uid), newDoc);
+      
+      // Delay sedikit agar onAuthStateChanged selesai sebelum loadUserProfile 
+      // yang dipanggil oleh register.
+      await new Promise(res => setTimeout(res, 500));
       await loadUserProfile(result.user);
     } catch (firebaseErr) {
-      console.warn("Register offline. Creating local cache account.");
-      // Register in local users list
-      const localUsers = JSON.parse(localStorage.getItem("ew_users") || "[]");
-      const newUid = `user-${Date.now()}`;
-      const newUser = {
-        uid: newUid,
-        email,
-        fullName,
-        phoneNumber: phoneNumber || "",
-        address: address || "",
-        role: "user",
-        points: 0,
-        createdAt: new Date().toISOString()
-      };
-      localUsers.push(newUser);
-      localStorage.setItem("ew_users", JSON.stringify(localUsers));
-
-      const mockProfile: UserProfile = {
-        uid: newUid,
-        email,
-        fullName,
-        phoneNumber: phoneNumber || "",
-        address: address || "",
-        role: "user",
-        points: 0
-      };
-      setProfile(mockProfile);
-      sessionStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
+      console.warn("Firebase Auth register failed:", firebaseErr);
+      throw firebaseErr;
     }
   };
 

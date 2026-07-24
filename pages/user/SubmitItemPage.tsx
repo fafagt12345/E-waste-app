@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { dbService, EStore, WasteBankLocation, Booking } from "../../services/db";
 import { aiService } from "../../services/aiService";
+import { uploadToCloudinary } from "../../services/uploadService";
 import { 
   Calendar, 
   Clock, 
@@ -116,34 +117,55 @@ export function SubmitItemPage() {
       };
 
       setPhotos((prev) => [...prev, newPhoto]);
-      simulateCloudinaryUpload(tempId, tempUrl, file);
+      processCloudinaryUpload(tempId, tempUrl, file);
     }
   };
 
-  // Simulate Cloudinary upload progress
-  const simulateCloudinaryUpload = (id: string, url: string, file: File | string) => {
-    let currentProgress = 10;
-    const interval = setInterval(async () => {
-      currentProgress += Math.floor(Math.random() * 25) + 10;
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        clearInterval(interval);
-        
-        setPhotos((prev) => 
-          prev.map((p) => p.id === id ? { ...p, progress: 100, status: "success" } : p)
-        );
-        toast.success("Foto berhasil diunggah ke Cloudinary.");
-        
-        // Trigger AI auto-fill on the first uploaded photo
-        if (photos.length === 0) {
-          triggerAISuggestions(file);
+  // Real Cloudinary upload progress
+  const processCloudinaryUpload = async (id: string, url: string, file: File | string) => {
+    if (typeof file === "string") {
+      // Mock camera capture
+      let currentProgress = 10;
+      const interval = setInterval(async () => {
+        currentProgress += Math.floor(Math.random() * 25) + 10;
+        if (currentProgress >= 100) {
+          currentProgress = 100;
+          clearInterval(interval);
+          setPhotos((prev) => 
+            prev.map((p) => p.id === id ? { ...p, progress: 100, status: "success" } : p)
+          );
+          toast.success("Foto berhasil diunggah ke Cloudinary.");
+          if (photos.length === 0) triggerAISuggestions(file);
+        } else {
+          setPhotos((prev) => 
+            prev.map((p) => p.id === id ? { ...p, progress: currentProgress } : p)
+          );
         }
-      } else {
+      }, 400);
+      return;
+    }
+
+    try {
+      const secureUrl = await uploadToCloudinary(file, (progress) => {
         setPhotos((prev) => 
-          prev.map((p) => p.id === id ? { ...p, progress: currentProgress } : p)
+          prev.map((p) => p.id === id ? { ...p, progress } : p)
         );
+      });
+      
+      setPhotos((prev) => 
+        prev.map((p) => p.id === id ? { ...p, url: secureUrl, progress: 100, status: "success" } : p)
+      );
+      toast.success("Foto berhasil diunggah ke Cloudinary.");
+      
+      if (photos.length === 0 || photos.every(p => p.status === 'success' || p.id === id)) {
+        triggerAISuggestions(secureUrl);
       }
-    }, 400);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal mengunggah foto.");
+      setPhotos((prev) => 
+        prev.map((p) => p.id === id ? { ...p, status: "failed" } : p)
+      );
+    }
   };
 
   // Simulated Camera trigger
@@ -179,7 +201,7 @@ export function SubmitItemPage() {
       };
 
       setPhotos((prev) => [...prev, newPhoto]);
-      simulateCloudinaryUpload(tempId, randomUrl, "camera_capture.jpg");
+      processCloudinaryUpload(tempId, randomUrl, "camera_capture.jpg");
     }, 400);
   };
 
