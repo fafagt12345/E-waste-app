@@ -4,33 +4,24 @@ import {
   UploadCloud,
   Send,
   CheckCircle2,
-  User,
-  Weight,
-  Recycle,
   Loader2,
   Sparkles,
-  TrendingUp,
-  Info,
   AlertTriangle,
   ArrowRight,
   ArrowLeft,
   Printer,
+  RotateCcw as RotateCcwIcon,
+  ChevronRight,
   HardHat,
   Barcode
 } from "lucide-react"; import { httpsCallable } from "firebase/functions";
 import { functions } from "../../config";
 import { doc, getDoc } from "firebase/firestore";
-<<<<<<< HEAD
-import { db, auth } from "../../config";
-import { dbService, EStore, UserProfile } from "../../services/db";
-import { aiService, AIVisionResult } from "../../services/aiService";
-=======
 import { db } from "../../config";
 import { EStore, UserProfile, EItemCategory, dbService } from "../../services/db";
 import { useAuth } from "../../context/AuthContext";
 import { aiService } from "../../services/aiService";
 import { uploadToCloudinary } from "../../services/uploadService";
->>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
 import { toast, Toaster } from "sonner";
 
 // Preset images for easy demo selection
@@ -54,7 +45,7 @@ export function TransactionPage() {
   const [cloudinaryUploading, setCloudinaryUploading] = useState(false);
 
   // Step 3 & 4: AI & Verification States
-  const [aiResult, setAiResult] = useState<AIVisionResult | null>(null);
+  const [aiResult, setAiResult] = useState<any | null>(null);
 
   // Officer Adjusted Fields
   const [itemType, setItemType] = useState("");
@@ -75,31 +66,9 @@ export function TransactionPage() {
   // QR scan triggers
   const handleScanUser = async (user: UserProfile) => {
     setScannedUser(user);
-<<<<<<< HEAD
-    setIsUserReady(false); // Reset status kesiapan
-
-    try {
-      // Cek langsung ke Firestore untuk data terbaru, terutama memberId
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (userDoc.exists() && userDoc.data().memberId) {
-        setIsUserReady(true);
-        toast.success(`User siap: ${user.fullName}`);
-        setStep("photo");
-      } else {
-        setIsUserReady(false);
-        toast.warning("Akun pengguna ini sedang difinalisasi. Member ID belum siap.");
-      }
-    } catch (error) {
-      console.error("Firestore permission error when scanning user", error);
-      toast.error("Tidak dapat membaca data user karena izin Firestore. Pastikan role petugas dan dokumen user sudah benar.");
-    }
-=======
     // Langsung lanjutkan ke langkah berikutnya tanpa pengecekan.
     toast.success(`User terpilih: ${user.fullName}`);
     setStep("photo");
->>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
   };
 
   const handleManualLookup = async () => {
@@ -139,39 +108,12 @@ export function TransactionPage() {
     setCloudinaryUploading(false);
 
     // Proceed to AI analysis
-    // triggerAIAnalysis(finalUrl);
-
-    // Langsung ke langkah verifikasi manual karena AI dinonaktifkan
-    setAiResult(null);
-    setItemType("");
-    setBrand("Samsung"); // Default ke merek umum
-    setCategoryName(EStore.getCategories()[0].name); // Default ke kategori pertama
-    setDamageLevelName(EStore.getDamageLevels()[2].name); // Default ke 'Rusak Sedang'
-    setStep("verify");
-    toast.success("Foto siap, silakan isi detail barang.");
+    triggerAIAnalysis(finalUrl);
   };
 
   // AI analysis triggers
   const triggerAIAnalysis = async (fileOrUrl: File | string) => {
-  };
-
-  // Scan serial barcode triggers
-  const handleScanSerial = async () => {
-    setScanningSerial(true);
-    try {
-      const result = await aiService.scanSerialNumber(uploadedImageUrl || "demo.jpg");
-      if (result.success && result.serialNumber) {
-        setSerialCode(result.serialNumber);
-        setNotes((n) => (n ? `${n}. ` : "") + `S/N: ${result.serialNumber} (${result.modelCode})`);
-        toast.success(`Barcode Terdeteksi: ${result.serialNumber}`);
-      } else {
-        toast.error("Barcode tidak terbaca. Masukkan manual.");
-      }
-    } catch (err) {
-      toast.error("Gagal memindai barcode");
-    } finally {
-      setScanningSerial(false);
-    }
+    // Fungsi ini sengaja dikosongkan untuk menonaktifkan AI
   };
 
   // Calculations
@@ -196,14 +138,7 @@ export function TransactionPage() {
   const handleSubmitTransaction = async () => {
     if (!scannedUser) return;
 
-    if (!auth.currentUser) {
-      toast.error("Anda harus login dahulu sebelum mencatat transaksi.");
-      return;
-    }
-
     try {
-      await auth.currentUser.getIdToken(true);
-
       const tx = await dbService.createTransaction({
         // officerId dan officerName akan diambil dari server untuk keamanan
         // Tidak perlu dikirim dari client
@@ -258,14 +193,6 @@ export function TransactionPage() {
           <p className="text-sm text-slate-500 font-medium">Layanan timbang dan konversi poin otomatis dengan bantuan AI Vision.</p>
         </div>
 
-        {step !== "scan" && step !== "receipt" && (
-          <button
-            onClick={handleReset}
-            className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-wider flex items-center gap-1"
-          >
-            <RotateCcwIcon className="h-4 w-4" /> Batal & Reset
-          </button>
-        )}
       </div>
 
       {/* Progress Wizard Header */}
@@ -273,7 +200,6 @@ export function TransactionPage() {
         <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold uppercase tracking-wider">
           <div className={`pb-2 border-b-2 transition-all ${step === "scan" ? "border-dlh-green-600 text-dlh-green-700" : "border-slate-200 text-slate-400"}`}>1. Scan Member</div>
           <div className={`pb-2 border-b-2 transition-all ${step === "photo" ? "border-dlh-green-600 text-dlh-green-700" : "border-slate-200 text-slate-400"}`}>2. Foto Sampah</div>
-          <div className={`pb-2 border-b-2 transition-all ${step === "analyzing" ? "border-dlh-green-600 text-dlh-green-700" : "border-slate-200 text-slate-400"}`}>3. Deteksi AI</div>
           <div className={`pb-2 border-b-2 transition-all ${step === "verify" ? "border-dlh-green-600 text-dlh-green-700" : "border-slate-200 text-slate-400"}`}>4. Timbang & Verifikasi</div>
         </div>
       )}
@@ -450,26 +376,6 @@ export function TransactionPage() {
                   </div>
                 </div>
 
-                {/* Scan serial code option */}
-                <div className="rounded-2xl border p-4 bg-slate-50/60">
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Membaca Nomor Seri (OCR Barcode)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={serialCode}
-                      onChange={(e) => setSerialCode(e.target.value)}
-                      placeholder="Masukkan atau scan nomor seri perangkat..."
-                      className="h-10 flex-1 border border-slate-200 rounded-xl px-3 text-xs bg-white focus:border-dlh-green-500 outline-none"
-                    />
-                    <button
-                      onClick={handleScanSerial}
-                      disabled={scanningSerial}
-                      className="h-10 px-4 bg-dlh-blue-600 text-white font-bold rounded-xl text-xs hover:bg-dlh-blue-700 transition-all flex items-center gap-1 disabled:opacity-50"
-                    >
-                      {scanningSerial ? <Loader2 className="animate-spin h-4 w-4" /> : <Barcode className="h-4 w-4" />} Scan Barcode
-                    </button>
-                  </div>
-                </div>
               </div>
 
               {/* Editing Form */}
@@ -684,26 +590,5 @@ export function TransactionPage() {
 
       </div>
     </div>
-  );
-}
-
-// Sub components
-function RotateCcwIcon(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.72 2.78L21 8" />
-      <polyline points="21 3 21 8 16 8" />
-    </svg>
   );
 }

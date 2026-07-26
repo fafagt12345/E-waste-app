@@ -1,9 +1,5 @@
 import { db, functions } from "../config";
-<<<<<<< HEAD
 import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-=======
-import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
->>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
 import { httpsCallable } from "firebase/functions";
 
 // Define Roles (simplified to admin and user)
@@ -247,8 +243,8 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
   {
     id: "tx-1001",
     date: "2026-07-10T14:32:00Z",
-    officerId: "admin-officer-uid",
-    officerName: "Agus Saputra (Admin DLH)",
+    officerId: "officer-uid",
+    officerName: "Agus Saputra (Admin)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Laptop",
@@ -266,8 +262,8 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
   {
     id: "tx-1002",
     date: "2026-07-15T09:15:00Z",
-    officerId: "admin-officer-uid",
-    officerName: "Agus Saputra (Admin DLH)",
+    officerId: "officer-uid",
+    officerName: "Agus Saputra (Admin)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Smartphone",
@@ -285,8 +281,8 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
   {
     id: "tx-1003",
     date: "2026-07-18T11:20:00Z",
-    officerId: "admin-officer-uid",
-    officerName: "Agus Saputra (Admin DLH)",
+    officerId: "officer-uid",
+    officerName: "Agus Saputra (Admin)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Keyboard",
@@ -370,8 +366,8 @@ const DEFAULT_AUDIT_LOGS: AuditLog[] = [
   {
     id: "log-2",
     timestamp: "2026-07-10T14:32:00Z",
-    userId: "admin-officer-uid",
-    userName: "Agus Saputra (Admin DLH)",
+    userId: "officer-uid",
+    userName: "Agus Saputra (Admin)",
     userRole: "admin",
     action: "Input Transaksi",
     details: "Mencatat setoran e-waste Laptop Asus dari Rian Wijaya (tx-1001)."
@@ -610,7 +606,7 @@ export const dbService = {
    * REFACTORED: Calls a Cloud Function to process the transaction securely.
    * The function will handle user point updates and transaction creation.
    */
-  createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status" | "officerId" | "officerName">): Promise<Transaction> => {
+  createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
     try {
       const processTransaction = httpsCallable(functions, 'processTransaction');
       const result = await processTransaction(txData);
@@ -805,8 +801,6 @@ export const dbService = {
 
     // Create a transaction record linked to this checkin
     await dbService.createTransaction({
-      // officerId dan officerName akan diambil dari server
-      // Tidak perlu dikirim dari client
       userId: booking.userId,
       userName: booking.userName,
       itemType: booking.itemName || "E-Waste",

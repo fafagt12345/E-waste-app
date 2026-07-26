@@ -35,11 +35,7 @@ service cloud.firestore {
     // - Admins and Petugas can read any user's profile.
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
-<<<<<<< HEAD
-      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() || isPetugas();
-=======
       allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
->>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
       allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       // No one can delete user documents from the client-side
       allow delete: if false;
@@ -81,6 +77,6 @@ service cloud.firestore {
 
     // Settings should be admin only. Audit logs may be written by petugas and admins.
     match /settings/{settingId} { allow read, write: if isAdmin(); }
-    match /audit_logs/{logId} { allow read, write: if isAdmin() || isPetugas(); }
+    match /audit_logs/{logId} { allow read, write: if isAdmin(); }
   }
 }
