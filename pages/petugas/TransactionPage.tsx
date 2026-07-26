@@ -91,7 +91,6 @@ export function TransactionPage() {
     setUploadedImageUrl("");
 
     let finalUrl = "";
-    let fileToAnalyze: File | string = fileOrUrl;
     try {
       if (typeof fileOrUrl === "string") {
         // Mock camera capture
@@ -114,7 +113,7 @@ export function TransactionPage() {
     setCloudinaryUploading(false);
 
     // Proceed to AI analysis
-    triggerAIAnalysis(fileToAnalyze);
+    triggerAIAnalysis(finalUrl);
   };
 
   // AI analysis triggers
