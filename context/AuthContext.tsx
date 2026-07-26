@@ -11,7 +11,7 @@ import {
   browserSessionPersistence,
 } from "firebase/auth";
 import { auth, db } from "../config";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 
 /**
  * Fungsi untuk membuat dokumen pengguna di Firestore.
@@ -37,7 +37,7 @@ export const createUserDocument = async (user: FirebaseUser, additionalData: any
   await setDoc(userRef, userData);
 };
 
-type Role = "admin" | "petugas" | "user";
+type Role = "admin" | "user";
 
 type UserProfile = {
   uid: string;
@@ -107,10 +107,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set Firebase Auth to session-only persistence so different tabs can have different accounts
     setPersistence(auth, browserSessionPersistence).catch(console.error);
 
+    let unsubscribeSnapshot: (() => void) | null = null;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+
       if (user) {
+        try {
+          await user.getIdToken(true);
+        } catch (tokenError) {
+          console.warn("Failed to refresh ID token on auth state change", tokenError);
+        }
         await loadUserProfile(user);
+
+        const userDocRef = doc(db, "users", user.uid);
+        unsubscribeSnapshot = onSnapshot(
+          userDocRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              const prof: UserProfile = {
+                uid: user.uid,
+                email: user.email,
+                fullName: data.fullName || "Pengguna",
+                role: (data.role as Role) || "user",
+                points: data.points ?? 0,
+                photoProfile: data.photoProfile || "",
+                createdAt: data.createdAt,
+              };
+              setProfile(prof);
+              sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
+            }
+          },
+          (error) => {
+            console.warn("Realtime profile sync failed:", error);
+          }
+        );
       } else {
         const cached = sessionStorage.getItem("ew_session_profile");
         if (cached) {
@@ -126,7 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
   }, []);
 
   const loginWithGoogle = async () => {
@@ -134,6 +174,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+
+      await user.getIdToken(true);
 
       // Cek apakah pengguna sudah ada di database
       const userDocRef = doc(db, "users", user.uid);
@@ -156,26 +198,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithEmail = async (email: string, password: string) => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
+      await result.user.getIdToken(true);
       await loadUserProfile(result.user);
     } catch (firebaseErr) {
-      console.warn("Firebase Auth offline/failed. Checking local mock database.");
-      // Check local storage accounts
-      const localUsers = JSON.parse(localStorage.getItem("ew_users") || "[]");
-      const matched = localUsers.find((u: any) => u.email === email);
-      if (matched && password) {
-        const mockProfile: UserProfile = {
-          uid: matched.uid,
-          email: matched.email,
-          fullName: matched.fullName,
-          role: matched.role as Role,
-          points: matched.points || 0,
-          photoProfile: matched.photoProfile || ""
-        };
-        setProfile(mockProfile);
-        sessionStorage.setItem("ew_session_profile", JSON.stringify(mockProfile));
-        return;
-      }
-      throw firebaseErr; // Re-throw if credentials mismatch local database
+      console.warn("Firebase Auth login failed:", firebaseErr);
+      throw new Error("Login gagal. Pastikan Anda menggunakan akun Firebase yang valid dan memiliki koneksi internet.");
     }
   };
 

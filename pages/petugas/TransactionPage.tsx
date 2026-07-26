@@ -20,7 +20,7 @@ import {
   Barcode
 } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../config";
+import { db, auth } from "../../config";
 import { dbService, EStore, UserProfile } from "../../services/db";
 import { aiService, AIVisionResult } from "../../services/aiService";
 import { toast, Toaster } from "sonner";
@@ -69,17 +69,22 @@ export function TransactionPage() {
     setScannedUser(user);
     setIsUserReady(false); // Reset status kesiapan
 
-    // Cek langsung ke Firestore untuk data terbaru, terutama memberId
-    const userRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userRef);
+    try {
+      // Cek langsung ke Firestore untuk data terbaru, terutama memberId
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
 
-    if (userDoc.exists() && userDoc.data().memberId) {
-      setIsUserReady(true);
-      toast.success(`User siap: ${user.fullName}`);
-      setStep("photo");
-    } else {
-      setIsUserReady(false);
-      toast.warning("Akun pengguna ini sedang difinalisasi. Member ID belum siap.");
+      if (userDoc.exists() && userDoc.data().memberId) {
+        setIsUserReady(true);
+        toast.success(`User siap: ${user.fullName}`);
+        setStep("photo");
+      } else {
+        setIsUserReady(false);
+        toast.warning("Akun pengguna ini sedang difinalisasi. Member ID belum siap.");
+      }
+    } catch (error) {
+      console.error("Firestore permission error when scanning user", error);
+      toast.error("Tidak dapat membaca data user karena izin Firestore. Pastikan role petugas dan dokumen user sudah benar.");
     }
   };
 
@@ -181,7 +186,14 @@ export function TransactionPage() {
   const handleSubmitTransaction = async () => {
     if (!scannedUser) return;
 
+    if (!auth.currentUser) {
+      toast.error("Anda harus login dahulu sebelum mencatat transaksi.");
+      return;
+    }
+
     try {
+      await auth.currentUser.getIdToken(true);
+
       const tx = await dbService.createTransaction({
         officerId: "officer-uid",
         officerName: "Agus Saputra (Petugas DLH)",
@@ -203,7 +215,8 @@ export function TransactionPage() {
       setStep("receipt");
       toast.success("Transaksi berhasil dicatat & Poin ditransfer!");
     } catch (e) {
-      toast.error("Gagal mencatat transaksi");
+      console.error("Transaction submit failed:", e);
+      toast.error("Gagal mencatat transaksi. Silakan cek konsol untuk detail.");
     }
   };
 

@@ -39,8 +39,8 @@ export const aiService = {
    * If a real Gemini API key was integrated we would fetch here, otherwise we return a realistic simulated analysis.
    */
   analyzeImage: async (imageFileOrUrl: File | string): Promise<AIVisionResult> => {
-    // Artificial 2.5 second delay to simulate API calculation
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    // Artificial 0.8 second delay to simulate API calculation
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
     // Determine name/type from filename if available, to make simulator look smart!
     let fileName = "";

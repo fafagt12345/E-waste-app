@@ -1,5 +1,6 @@
-import { db } from "../config";
+import { db, functions } from "../config";
 import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 
 // Define Roles
 export type Role = "admin" | "petugas" | "user";
@@ -501,9 +502,10 @@ export const dbService = {
       EStore.saveUsers(users);
     }
     try {
-      await updateDoc(doc(db, "users", uid), data);
+      await setDoc(doc(db, "users", uid), data, { merge: true });
     } catch (e) {
       console.warn("Firestore user profile update failed. Saved to local storage.", e);
+      throw e;
     }
   },
 
@@ -537,9 +539,6 @@ export const dbService = {
    */
   createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
     try {
-      // Lazy-load getFunctions to avoid circular dependencies if not careful
-      const { getFunctions, httpsCallable } = await import("firebase/functions");
-      const functions = getFunctions();
       const processTransaction = httpsCallable(functions, 'processTransaction');
 
       const result = await processTransaction(txData);

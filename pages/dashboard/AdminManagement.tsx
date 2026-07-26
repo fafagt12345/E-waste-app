@@ -137,7 +137,24 @@ export function AdminManagement() {
               locationName: (activeTab === "officers" || formUserRole === "petugas") ? (matchedLoc?.name || "") : undefined
             };
             EStore.saveUsers(users);
-            toast.success("Akun berhasil diperbarui");
+            let firestoreOK = true;
+            try {
+              await dbService.updateUserProfile(editId, {
+                fullName: formName,
+                email: formEmail,
+                points: formPoints,
+                role: activeTab === "officers" ? "petugas" : formUserRole,
+                locationId: (activeTab === "officers" || formUserRole === "petugas") ? formLocationId : undefined,
+                locationName: (activeTab === "officers" || formUserRole === "petugas") ? (matchedLoc?.name || "") : undefined
+              });
+            } catch (err) {
+              firestoreOK = false;
+              toast.error("Gagal menyimpan perubahan ke Firestore. Pastikan akun admin sudah login dan memiliki izin.");
+              console.warn("Firestore update failed for admin user edit", err);
+            }
+            if (firestoreOK) {
+              toast.success("Akun berhasil diperbarui");
+            }
           }
         } else {
           const newUser: UserProfile = {
