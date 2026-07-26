@@ -76,9 +76,7 @@ export default function DashboardLayout() {
   };
 
   const navItems =
-    profile?.role === "admin"
-      ? adminNav
-      : profile?.role === "petugas"
+    profile?.role === "admin" // Admin sekarang juga mencakup fungsi petugas
       ? officerNav
       : userNav;
 
@@ -87,7 +85,7 @@ export default function DashboardLayout() {
 
     const timeStr = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     const userMsg: ChatMessage = { sender: "user", text: textToSend, time: timeStr };
-    
+
     setChatHistory((prev) => [...prev, userMsg]);
     setInputMsg("");
     setIsTyping(true);
@@ -112,7 +110,7 @@ export default function DashboardLayout() {
           E-Waste <span className="text-dlh-green-400">Exchange</span>
         </h1>
       </div>
-      
+
       <nav className="flex flex-1 flex-col mt-4">
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
           <li>
@@ -122,10 +120,9 @@ export default function DashboardLayout() {
                   <NavLink
                     to={item.href}
                     className={({ isActive }) =>
-                      `group flex gap-x-3 rounded-2xl p-2.5 text-xs leading-6 font-bold transition-all ${
-                        isActive
-                          ? "bg-gradient-to-r from-dlh-green-600 to-dlh-green-700 text-white shadow-md shadow-dlh-green-600/10"
-                          : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+                      `group flex gap-x-3 rounded-2xl p-2.5 text-xs leading-6 font-bold transition-all ${isActive
+                        ? "bg-gradient-to-r from-dlh-green-600 to-dlh-green-700 text-white shadow-md shadow-dlh-green-600/10"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/40"
                       }`
                     }
                   >
@@ -140,10 +137,10 @@ export default function DashboardLayout() {
           {/* User profile brief card in sidebar */}
           <li className="mt-auto border-t border-white/5 pt-4">
             <div className="flex items-center gap-3 px-1 mb-4">
-              <img 
-                className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700" 
-                src={profile?.photoProfile || `https://ui-avatars.com/api/?name=${profile?.fullName}&background=22c55e&color=fff`} 
-                alt="" 
+              <img
+                className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700"
+                src={profile?.photoProfile || `https://ui-avatars.com/api/?name=${profile?.fullName}&background=22c55e&color=fff`}
+                alt=""
               />
               <div className="truncate">
                 <span className="block text-xs font-bold text-slate-200 truncate">{profile?.fullName}</span>
@@ -193,23 +190,23 @@ export default function DashboardLayout() {
           <button type="button" className="-m-2.5 p-2.5 text-slate-700 lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </button>
-          
+
           <div className="h-6 w-px bg-slate-200 lg:hidden" aria-hidden="true" />
-          
+
           {/* Topbar elements */}
           <div className="flex flex-1 justify-end gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <button type="button" className="p-2 text-slate-400 hover:text-slate-500 rounded-xl hover:bg-slate-50 transition-colors">
                 <Bell className="h-5 w-5" />
               </button>
-              
+
               <div className="h-6 w-px bg-slate-200" aria-hidden="true" />
 
               <div className="flex items-center gap-x-2">
-                <img 
-                  className="h-8 w-8 rounded-full border bg-slate-50" 
-                  src={profile?.photoProfile || `https://ui-avatars.com/api/?name=${profile?.fullName}&background=22c55e&color=fff`} 
-                  alt="" 
+                <img
+                  className="h-8 w-8 rounded-full border bg-slate-50"
+                  src={profile?.photoProfile || `https://ui-avatars.com/api/?name=${profile?.fullName}&background=22c55e&color=fff`}
+                  alt=""
                 />
                 <span className="hidden lg:inline text-xs font-bold text-slate-700">{profile?.fullName}</span>
                 <span className="text-[10px] uppercase tracking-wider font-extrabold text-dlh-green-600 bg-dlh-green-50 px-2 py-0.5 rounded-full border border-dlh-green-100">{profile?.role}</span>
@@ -252,11 +249,10 @@ export default function DashboardLayout() {
             <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
               {chatHistory.map((msg, i) => (
                 <div key={i} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-2xl p-3 text-xs leading-relaxed ${
-                    msg.sender === "user" 
-                      ? "bg-dlh-green-600 text-white rounded-tr-none shadow-sm" 
+                  <div className={`max-w-[80%] rounded-2xl p-3 text-xs leading-relaxed ${msg.sender === "user"
+                      ? "bg-dlh-green-600 text-white rounded-tr-none shadow-sm"
                       : "bg-white border text-slate-800 rounded-tl-none shadow-xs font-medium"
-                  }`}>
+                    }`}>
                     {msg.text}
                     <span className={`block text-[8px] mt-1 text-right ${msg.sender === "user" ? "text-emerald-200" : "text-slate-400"}`}>
                       {msg.time}
@@ -278,19 +274,19 @@ export default function DashboardLayout() {
 
             {/* Preset chips */}
             <div className="p-2 bg-slate-50 border-t flex gap-1.5 overflow-x-auto whitespace-nowrap shrink-0">
-              <button 
+              <button
                 onClick={() => handleSendChat("Bagaimana cara menghitung poin?")}
                 className="px-3 py-1 rounded-full bg-white border text-[10px] font-bold text-slate-600 hover:border-dlh-green-500 transition-all shrink-0"
               >
                 Rumus Poin
               </button>
-              <button 
+              <button
                 onClick={() => handleSendChat("Apa saja voucher yang tersedia?")}
                 className="px-3 py-1 rounded-full bg-white border text-[10px] font-bold text-slate-600 hover:border-dlh-green-500 transition-all shrink-0"
               >
                 Voucher PLN
               </button>
-              <button 
+              <button
                 onClick={() => handleSendChat("Di mana lokasi bank sampah?")}
                 className="px-3 py-1 rounded-full bg-white border text-[10px] font-bold text-slate-600 hover:border-dlh-green-500 transition-all shrink-0"
               >
@@ -299,7 +295,7 @@ export default function DashboardLayout() {
             </div>
 
             {/* Input Form */}
-            <form 
+            <form
               onSubmit={(e) => { e.preventDefault(); handleSendChat(inputMsg); }}
               className="p-3 border-t bg-white flex gap-2 items-center shrink-0"
             >
@@ -323,7 +319,7 @@ export default function DashboardLayout() {
           className="h-14 w-14 rounded-full bg-gradient-to-tr from-dlh-green-600 to-dlh-blue-600 text-white shadow-xl hover:shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all relative border border-white/10"
         >
           {chatOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
-          
+
           {!chatOpen && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-dlh-yellow-400 opacity-75" />

@@ -9,7 +9,7 @@ export interface AIVisionResult {
   confidenceScore: number; // percentage (0-100)
 }
 
-// List of supported items, brands, and categories to match nicely in simulation
+// List of supported items, brands, and categories to match nicely in simulation (if AI fails)
 const CATEGORY_MAP: Record<string, string> = {
   "Handphone": "Gadget / Handphone",
   "Smartphone": "Gadget / Handphone",

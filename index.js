@@ -12,15 +12,15 @@ exports.onUserCreate = functions.region("asia-southeast2")
     .auth.user().onCreate(async (user) => {
         const { uid } = user;
 
-        // 1. Dapatkan atau buat dokumen pengguna di Firestore
+        // 1. Dapatkan dokumen pengguna di Firestore. Jika tidak ada, buat dengan data default.
         const userDocRef = db.collection("users").doc(uid);
         const userDoc = await userDocRef.get();
         let userData = {};
         if (userDoc.exists) {
             userData = userDoc.data();
         } else {
-            console.log(`Dokumen untuk user ${uid} tidak ditemukan. Membuat dokumen baru.`);
-            // Default data jika dokumen belum ada (misal: user dibuat via Firebase Auth console)
+            console.log(`Dokumen Firestore untuk user ${uid} tidak ditemukan. Membuat dokumen baru.`);
+            // Data default jika dokumen belum ada (misal: user dibuat via Firebase Auth console atau email/password)
             userData = { uid: uid, email: user.email, fullName: user.displayName || "Pengguna Baru", createdAt: admin.firestore.FieldValue.serverTimestamp() };
         }
 
@@ -51,10 +51,10 @@ exports.onUserCreate = functions.region("asia-southeast2")
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
 
-        // 4. Set Custom Claims untuk Role-Based Access Control (default ke 'user')
+        // 4. Set Custom Claims untuk Role-Based Access Control (default ke 'user' untuk pengguna baru)
         await admin.auth().setCustomUserClaims(uid, { role: "user" });
 
-        // 5. Set/Update dokumen pengguna dengan data baru DAN role dari custom claim
+        // 5. Set/Update dokumen pengguna di Firestore dengan data baru DAN role dari custom claim
         await userDocRef.set({ ...userData, ...additionalData, role: "user" }, { merge: true });
 
         console.log(`Profil lengkap untuk user ${uid} berhasil dibuat dengan memberId: ${memberId}`);
@@ -76,12 +76,12 @@ exports.processTransaction = functions.region("asia-southeast2")
         const { uid, token } = context.auth;
         const userRole = token.role; // Mengandalkan custom claim yang sudah di-set
 
-        if (userRole !== "admin") {
+        if (userRole !== "admin") { // Hanya admin yang bisa memproses transaksi
             throw new functions.https.HttpsError("permission-denied", "Anda tidak memiliki izin untuk melakukan aksi ini.");
         }
 
         // 2. Validasi data input
-        const { userId, points, carbonSaved, officerName } = data;
+        const { userId, points, carbonSaved } = data; // officerName akan diambil dari server
         if (!userId || typeof points !== "number" || typeof carbonSaved !== "number") {
             throw new functions.https.HttpsError("invalid-argument", "Data yang dikirim tidak lengkap atau tidak valid.");
         }
@@ -89,16 +89,18 @@ exports.processTransaction = functions.region("asia-southeast2")
         const transactionId = `tx-${Date.now()}`;
         const newTxData = {
             ...data,
+            // Override officerId dan officerName dengan data dari server untuk keamanan
+            officerId: uid,
+            officerName: "", // Akan diisi dari userDoc petugas
             id: transactionId,
             date: new Date().toISOString(),
             status: "approved",
-            officerName: officerName || "Petugas DLH", // Ambil dari data atau fallback
-            officerId: uid, // Officer ID diambil dari konteks auth yang aman
         };
 
         const userRef = db.collection("users").doc(userId);
         const transactionRef = db.collection("transactions").doc(transactionId);
         const auditLogRef = db.collection("audit_logs").doc();
+        const officerRef = db.collection("users").doc(uid); // Referensi ke dokumen petugas yang sedang login
 
         // 3. Jalankan operasi dalam satu transaction batch
         try {
@@ -107,6 +109,13 @@ exports.processTransaction = functions.region("asia-southeast2")
                 if (!userDoc.exists) {
                     throw new functions.https.HttpsError("not-found", `Pengguna dengan ID ${userId} tidak ditemukan.`);
                 }
+                const officerDoc = await t.get(officerRef);
+                if (!officerDoc.exists) {
+                    throw new functions.https.HttpsError("not-found", `Profil petugas dengan ID ${uid} tidak ditemukan.`);
+                }
+
+                // Ambil nama petugas dari dokumen Firestore untuk keamanan
+                newTxData.officerName = officerDoc.data().fullName || "Admin DLH";
 
                 const userData = userDoc.data();
                 let memberId = userData.memberId;
@@ -135,7 +144,7 @@ exports.processTransaction = functions.region("asia-southeast2")
 
                 t.update(userRef, { points: newPoints, carbonReduced: newCarbonReduced, totalTransactions: newTotalTransactions, totalWeight: newTotalWeight });
                 t.set(transactionRef, newTxData);
-                t.set(auditLogRef, { action: "Input Transaksi", details: `Mencatat setoran e-waste ${data.itemType} untuk user ${userData.fullName}.`, timestamp: admin.firestore.FieldValue.serverTimestamp(), userId: uid, userName: newTxData.officerName, userRole });
+                t.set(auditLogRef, { action: "Input Transaksi", details: `Mencatat setoran e-waste ${data.itemType} untuk user ${userData.fullName}.`, timestamp: admin.firestore.FieldValue.serverTimestamp(), userId: uid, userName: newTxData.officerName, userRole: userRole });
             });
 
             console.log(`Transaksi ${transactionId} berhasil diproses untuk user ${userId}.`);
