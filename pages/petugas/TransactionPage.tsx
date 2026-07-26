@@ -18,7 +18,8 @@ import {
   ChevronRight,
   HardHat,
   Barcode
-} from "lucide-react";
+} from "lucide-react"; import { httpsCallable } from "firebase/functions";
+import { functions } from "../../config";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config";
 import { EStore, UserProfile, EItemCategory, dbService } from "../../services/db";
@@ -41,6 +42,7 @@ export function TransactionPage() {
   const [scannedUser, setScannedUser] = useState<UserProfile | null>(null);
   const [manualUid, setManualUid] = useState("");
   const [isUserReady, setIsUserReady] = useState(false); // State baru untuk cek kesiapan user
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   // Step 2: Photo States
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
@@ -94,6 +96,28 @@ export function TransactionPage() {
     }
   };
 
+  const handleFinalizeAccount = async () => {
+    if (!scannedUser) return;
+    setIsFinalizing(true);
+    try {
+      const finalizeUser = httpsCallable(functions, 'finalizeUserAccount');
+      const result = await finalizeUser({ targetUid: scannedUser.uid });
+
+      // @ts-ignore
+      if (result.data.success) {
+        // @ts-ignore
+        toast.success(`Akun difinalisasi! Member ID: ${result.data.memberId}`);
+        setIsUserReady(true); // Set user sebagai siap
+      } else {
+        // @ts-ignore
+        throw new Error(result.data.message || "Gagal memfinalisasi akun.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Terjadi kesalahan saat finalisasi.");
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
   // Cloudinary / Photo Upload
   const handleImageSelected = async (fileOrUrl: File | string) => {
     setCloudinaryUploading(true);
@@ -335,17 +359,26 @@ export function TransactionPage() {
                 <span className="block text-sm font-bold text-slate-800">{scannedUser?.fullName}</span>
                 <span className="block text-[10px] text-slate-500">{scannedUser?.phoneNumber || "No telepon tidak ada"} • {scannedUser?.address || "Alamat tidak ada"}</span>
               </div>
-              {!isUserReady && (
-                <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 flex items-start gap-2 text-xs">
-                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Akun Belum Siap</span>
-                    <p className="text-[10px] leading-tight">
-                      Minta penyetor untuk membuka halaman profil dan menekan tombol "Muat Ulang Data" hingga Member ID muncul.
-                    </p>
+              {!isUserReady &&
+                (isFinalizing ? (
+                  <div className="p-3 rounded-xl border border-dlh-blue-200 bg-dlh-blue-50 text-dlh-blue-800 flex items-center gap-2 text-xs">
+                    <Loader2 className="h-4 w-4 text-dlh-blue-500 shrink-0 animate-spin" />
+                    <span className="font-bold">Memfinalisasi akun...</span>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 flex items-start gap-3 text-xs">
+                    <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Akun Belum Siap</span>
+                      <p className="text-[10px] leading-tight mb-2">
+                        Akun ini baru dan belum memiliki Member ID.
+                      </p>
+                      <button onClick={handleFinalizeAccount} className="bg-amber-500 text-white font-bold text-[10px] px-3 py-1 rounded-lg hover:bg-amber-600">
+                        Finalisasi Akun Sekarang
+                      </button>
+                    </div>
+                  </div>
+                ))}
             </div>
 
             <div className="text-center max-w-md mx-auto space-y-2">
