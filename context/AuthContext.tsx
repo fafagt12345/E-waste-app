@@ -11,7 +11,7 @@ import {
   browserSessionPersistence,
 } from "firebase/auth";
 import { auth, db } from "../config";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 
 /**
  * Fungsi untuk membuat dokumen pengguna di Firestore.
@@ -37,7 +37,7 @@ export const createUserDocument = async (user: FirebaseUser, additionalData: any
   await setDoc(userRef, userData);
 };
 
-type Role = "admin" | "petugas" | "user";
+type Role = "admin" | "user";
 
 type UserProfile = {
   uid: string;
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn("Firestore fetch error, trying to use session cache.", e);
     }
-    
+
     // Fallback to session cache if Firestore fails or document doesn't exist yet
     const cached = sessionStorage.getItem("ew_session_profile");
     if (cached) {
@@ -108,8 +108,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set Firebase Auth to session-only persistence so different tabs can have different accounts
     setPersistence(auth, browserSessionPersistence).catch(console.error);
 
+    let unsubscribeSnapshot: (() => void) | null = null;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+
       if (user) {
         try {
           await user.getIdToken(true);
@@ -117,6 +123,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn("Unable to refresh auth token during startup:", e);
         }
         await loadUserProfile(user);
+
+        const userDocRef = doc(db, "users", user.uid);
+        unsubscribeSnapshot = onSnapshot(
+          userDocRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              const prof: UserProfile = {
+                uid: user.uid,
+                email: user.email,
+                fullName: data.fullName || "Pengguna",
+                role: (data.role as Role) || "user",
+                points: data.points ?? 0,
+                photoProfile: data.photoProfile || "",
+                createdAt: data.createdAt,
+              };
+              setProfile(prof);
+              sessionStorage.setItem("ew_session_profile", JSON.stringify(prof));
+            }
+          },
+          (error) => {
+            console.warn("Realtime profile sync failed:", error);
+          }
+        );
       } else {
         const cached = sessionStorage.getItem("ew_session_profile");
         if (cached) {
@@ -132,7 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
   }, []);
 
   const loginWithGoogle = async () => {
@@ -141,7 +176,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Refresh token so any custom claims are available immediately
       await user.getIdToken(true);
 
       // Cek apakah pengguna sudah ada di database
@@ -170,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (firebaseErr: any) {
       console.warn("Firebase Auth login failed:", firebaseErr);
       // Melempar error dengan kode aslinya agar dapat dibedakan di UI
-      throw firebaseErr; 
+      throw firebaseErr;
     }
   };
 
@@ -188,7 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: serverTimestamp(),
       };
       await setDoc(doc(db, "users", result.user.uid), newDoc);
-      
+
       // Delay sedikit agar onAuthStateChanged selesai sebelum loadUserProfile 
       // yang dipanggil oleh register.
       await new Promise(res => setTimeout(res, 500));

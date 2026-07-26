@@ -125,6 +125,39 @@ export function AdminManagement() {
         const matchedLoc = locationsList.find(l => l.id === formLocationId);
 
         if (editId) {
+<<<<<<< HEAD
+          const idx = users.findIndex((u) => u.uid === editId);
+          if (idx !== -1) {
+            users[idx] = { 
+              ...users[idx], 
+              fullName: formName, 
+              email: formEmail, 
+              points: formPoints, 
+              role: activeTab === "officers" ? "petugas" : formUserRole,
+              locationId: (activeTab === "officers" || formUserRole === "petugas") ? formLocationId : undefined,
+              locationName: (activeTab === "officers" || formUserRole === "petugas") ? (matchedLoc?.name || "") : undefined
+            };
+            EStore.saveUsers(users);
+            let firestoreOK = true;
+            try {
+              await dbService.updateUserProfile(editId, {
+                fullName: formName,
+                email: formEmail,
+                points: formPoints,
+                role: activeTab === "officers" ? "petugas" : formUserRole,
+                locationId: (activeTab === "officers" || formUserRole === "petugas") ? formLocationId : undefined,
+                locationName: (activeTab === "officers" || formUserRole === "petugas") ? (matchedLoc?.name || "") : undefined
+              });
+            } catch (err) {
+              firestoreOK = false;
+              toast.error("Gagal menyimpan perubahan ke Firestore. Pastikan akun admin sudah login dan memiliki izin.");
+              console.warn("Firestore update failed for admin user edit", err);
+            }
+            if (firestoreOK) {
+              toast.success("Akun berhasil diperbarui");
+            }
+          }
+=======
           const dataToUpdate: Partial<UserProfile> = { 
             fullName: formName, 
             email: formEmail, 
@@ -136,6 +169,7 @@ export function AdminManagement() {
           await dbService.updateUserProfile(editId, dataToUpdate);
           toast.success("Akun berhasil diperbarui dan disinkronisasi dengan database");
           loadData(); // Refresh UI
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
         } else {
           const newUser: UserProfile = {
             uid: `user-${Date.now()}`,

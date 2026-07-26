@@ -20,11 +20,17 @@ import {
 } from "lucide-react"; import { httpsCallable } from "firebase/functions";
 import { functions } from "../../config";
 import { doc, getDoc } from "firebase/firestore";
+<<<<<<< HEAD
+import { db, auth } from "../../config";
+import { dbService, EStore, UserProfile } from "../../services/db";
+import { aiService, AIVisionResult } from "../../services/aiService";
+=======
 import { db } from "../../config";
 import { EStore, UserProfile, EItemCategory, dbService } from "../../services/db";
 import { useAuth } from "../../context/AuthContext";
 import { aiService } from "../../services/aiService";
 import { uploadToCloudinary } from "../../services/uploadService";
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
 import { toast, Toaster } from "sonner";
 
 // Preset images for easy demo selection
@@ -69,9 +75,31 @@ export function TransactionPage() {
   // QR scan triggers
   const handleScanUser = async (user: UserProfile) => {
     setScannedUser(user);
+<<<<<<< HEAD
+    setIsUserReady(false); // Reset status kesiapan
+
+    try {
+      // Cek langsung ke Firestore untuk data terbaru, terutama memberId
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+
+      if (userDoc.exists() && userDoc.data().memberId) {
+        setIsUserReady(true);
+        toast.success(`User siap: ${user.fullName}`);
+        setStep("photo");
+      } else {
+        setIsUserReady(false);
+        toast.warning("Akun pengguna ini sedang difinalisasi. Member ID belum siap.");
+      }
+    } catch (error) {
+      console.error("Firestore permission error when scanning user", error);
+      toast.error("Tidak dapat membaca data user karena izin Firestore. Pastikan role petugas dan dokumen user sudah benar.");
+    }
+=======
     // Langsung lanjutkan ke langkah berikutnya tanpa pengecekan.
     toast.success(`User terpilih: ${user.fullName}`);
     setStep("photo");
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
   };
 
   const handleManualLookup = async () => {
@@ -111,28 +139,20 @@ export function TransactionPage() {
     setCloudinaryUploading(false);
 
     // Proceed to AI analysis
-    triggerAIAnalysis(finalUrl);
+    // triggerAIAnalysis(finalUrl);
+
+    // Langsung ke langkah verifikasi manual karena AI dinonaktifkan
+    setAiResult(null);
+    setItemType("");
+    setBrand("Samsung"); // Default ke merek umum
+    setCategoryName(EStore.getCategories()[0].name); // Default ke kategori pertama
+    setDamageLevelName(EStore.getDamageLevels()[2].name); // Default ke 'Rusak Sedang'
+    setStep("verify");
+    toast.success("Foto siap, silakan isi detail barang.");
   };
 
   // AI analysis triggers
   const triggerAIAnalysis = async (fileOrUrl: File | string) => {
-    setStep("analyzing");
-    try {
-      const result = await aiService.analyzeImage(fileOrUrl);
-      setAiResult(result);
-
-      // Seed verification fields from AI
-      setItemType(result.itemType);
-      setBrand(result.brand);
-      setCategoryName(result.category);
-      setDamageLevelName(result.estimatedCondition);
-
-      setStep("verify");
-      toast.success("Analisis AI Vision selesai");
-    } catch (e) {
-      toast.error("AI Vision analisis gagal");
-      setStep("photo");
-    }
   };
 
   // Scan serial barcode triggers
@@ -176,7 +196,14 @@ export function TransactionPage() {
   const handleSubmitTransaction = async () => {
     if (!scannedUser) return;
 
+    if (!auth.currentUser) {
+      toast.error("Anda harus login dahulu sebelum mencatat transaksi.");
+      return;
+    }
+
     try {
+      await auth.currentUser.getIdToken(true);
+
       const tx = await dbService.createTransaction({
         // officerId dan officerName akan diambil dari server untuk keamanan
         // Tidak perlu dikirim dari client
@@ -198,7 +225,8 @@ export function TransactionPage() {
       setStep("receipt");
       toast.success("Transaksi berhasil dicatat & Poin ditransfer!");
     } catch (e) {
-      toast.error("Gagal mencatat transaksi");
+      console.error("Transaction submit failed:", e);
+      toast.error("Gagal mencatat transaksi. Silakan cek konsol untuk detail.");
     }
   };
 
@@ -378,24 +406,6 @@ export function TransactionPage() {
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: ANALYZING AI VISION */}
-        {step === "analyzing" && (
-          <div className="text-center py-10 space-y-6">
-            <div className="relative mx-auto h-16 w-16">
-              <div className="absolute inset-0 rounded-full border-4 border-dlh-green-100 border-t-dlh-green-600 animate-spin" />
-              <div className="absolute inset-2 flex items-center justify-center rounded-full bg-dlh-green-50 text-dlh-green-600">
-                <Sparkles className="h-6 w-6 animate-pulse" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-xl font-extrabold text-slate-800">Menghubungi AI Gemini Vision...</h2>
-              <p className="text-xs text-slate-500 font-semibold max-w-sm mx-auto leading-relaxed">
-                Harap tunggu, AI sedang menganalisis piksel gambar untuk mendeteksi jenis barang, sasis casing, dan goresan fisik.
-              </p>
             </div>
           </div>
         )}

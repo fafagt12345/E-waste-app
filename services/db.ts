@@ -1,5 +1,9 @@
 import { db, functions } from "../config";
+<<<<<<< HEAD
+import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+=======
 import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
 import { httpsCallable } from "firebase/functions";
 
 // Define Roles (simplified to admin and user)
@@ -571,9 +575,10 @@ export const dbService = {
       EStore.saveUsers(users);
     }
     try {
-      await updateDoc(doc(db, "users", uid), data);
+      await setDoc(doc(db, "users", uid), data, { merge: true });
     } catch (e) {
       console.warn("Firestore user profile update failed. Saved to local storage.", e);
+      throw e;
     }
   },
 

@@ -9,7 +9,7 @@ export interface AIVisionResult {
   confidenceScore: number; // percentage (0-100)
 }
 
-// List of supported items, brands, and categories to match nicely in simulation
+// List of supported items, brands, and categories to match nicely in simulation (if AI fails)
 const CATEGORY_MAP: Record<string, string> = {
   "Handphone": "Gadget / Handphone",
   "Smartphone": "Gadget / Handphone",
@@ -43,10 +43,10 @@ export const aiService = {
     if (typeof imageFileOrUrl === "string") {
       imageUrl = imageFileOrUrl;
       if (imageUrl.startsWith("blob:")) {
-         throw new Error("Blob URLs cannot be analyzed by the server. Please upload to Cloudinary first.");
+        throw new Error("Blob URLs cannot be analyzed by the server. Please upload to Cloudinary first.");
       }
     } else {
-       throw new Error("aiService expects a Cloudinary URL, not a File object. Please upload the file first.");
+      throw new Error("aiService expects a Cloudinary URL, not a File object. Please upload the file first.");
     }
 
     try {
@@ -63,7 +63,7 @@ export const aiService = {
         try {
           const errData = await response.json();
           if (errData.error) errorMsg = errData.error;
-        } catch (e) {}
+        } catch (e) { }
         throw new Error(errorMsg);
       }
 

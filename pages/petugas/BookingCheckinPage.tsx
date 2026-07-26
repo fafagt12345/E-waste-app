@@ -23,7 +23,7 @@ import {
   Award
 } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../config";
+import { db, auth } from "../../config";
 import { toast, Toaster } from "sonner";
 
 interface PhotoItem {
@@ -92,7 +92,26 @@ export function BookingCheckinPage() {
     setWeightKg(1.0);
     setManualPoints(null);
     setOfficerPhotos([]);
+<<<<<<< HEAD
+
+    // Cek kesiapan user
+    try {
+      const userRef = doc(db, "users", booking.userId);
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists() || !userDoc.data().memberId) {
+        toast.warning("Akun penyetor ini belum siap. Minta pengguna untuk me-refresh halaman profil mereka hingga Member ID muncul.");
+        setActiveBooking(null); // Batalkan proses jika user belum siap
+        return;
+      }
+      toast.success(`Check-in dimulai untuk: ${booking.userName}`);
+    } catch (error) {
+      console.error("Firestore permission error when checking user readiness", error);
+      toast.error("Tidak dapat membaca data user karena izin Firestore. Pastikan role petugas dan dokumen user sudah benar.");
+      setActiveBooking(null);
+    }
+=======
     toast.success(`Check-in dimulai untuk: ${booking.userName}`);
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
   };
 
   // Photo uploads
@@ -228,14 +247,33 @@ export function BookingCheckinPage() {
     }
 
     try {
+      if (!profile || profile.role !== "petugas") {
+        toast.error("Anda harus login sebagai petugas untuk memproses check-in.");
+        return;
+      }
+
+      if (auth.currentUser) {
+        await auth.currentUser.getIdToken(true);
+      }
+
       const updated = await dbService.completeBookingCheckin(
         activeBooking.id,
         officerPhotos.map(p => p.url),
         weightKg,
         pointsAwarded,
         carbonSaved,
+<<<<<<< HEAD
         // officerId dan officerName akan diambil dari server untuk keamanan
         // Tidak perlu dikirim dari client
+=======
+<<<<<<< HEAD
+        profile.uid,
+        profile.fullName
+=======
+        profile?.uid || "unknown-officer",
+        profile?.fullName || "Petugas DLH"
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
+>>>>>>> 5d429b6ef70df4a1e96ef67dfd19d6b641c02067
       );
 
       if (updated) {
@@ -251,7 +289,8 @@ export function BookingCheckinPage() {
         toast.error("Gagal memproses check-in.");
       }
     } catch (e) {
-      toast.error("Terjadi kesalahan sistem check-in.");
+      console.error("Booking checkin failed:", e);
+      toast.error("Terjadi kesalahan sistem check-in. Silakan cek konsol untuk detail.");
     }
   };
 
