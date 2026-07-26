@@ -45,9 +45,9 @@ service cloud.firestore {
     // - Users can read their own bookings.
     // - Petugas can read all bookings and update their status.
     match /bookings/{bookingId} {
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
-      allow update: if isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid; // User can create their own booking
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin(); // User can read their own, Admin can read all
+      allow update: if isAdmin(); // Only Admin can update booking status
       allow delete: if isAdmin();
     }
 

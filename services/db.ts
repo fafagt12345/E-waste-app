@@ -2,7 +2,7 @@ import { db, functions } from "../config";
 import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
-// Define Roles
+// Define Roles (simplified to admin and user)
 export type Role = "admin" | "user";
 
 export interface UserProfile {
@@ -243,8 +243,8 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
   {
     id: "tx-1001",
     date: "2026-07-10T14:32:00Z",
-    officerId: "officer-uid",
-    officerName: "Agus Saputra (Admin)",
+    officerId: "admin-officer-uid",
+    officerName: "Agus Saputra (Admin DLH)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Laptop",
@@ -262,8 +262,8 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
   {
     id: "tx-1002",
     date: "2026-07-15T09:15:00Z",
-    officerId: "officer-uid",
-    officerName: "Agus Saputra (Admin)",
+    officerId: "admin-officer-uid",
+    officerName: "Agus Saputra (Admin DLH)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Smartphone",
@@ -281,8 +281,8 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
   {
     id: "tx-1003",
     date: "2026-07-18T11:20:00Z",
-    officerId: "officer-uid",
-    officerName: "Agus Saputra (Admin)",
+    officerId: "admin-officer-uid",
+    officerName: "Agus Saputra (Admin DLH)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Keyboard",
@@ -366,8 +366,8 @@ const DEFAULT_AUDIT_LOGS: AuditLog[] = [
   {
     id: "log-2",
     timestamp: "2026-07-10T14:32:00Z",
-    userId: "officer-uid",
-    userName: "Agus Saputra (Admin)",
+    userId: "admin-officer-uid",
+    userName: "Agus Saputra (Admin DLH)",
     userRole: "admin",
     action: "Input Transaksi",
     details: "Mencatat setoran e-waste Laptop Asus dari Rian Wijaya (tx-1001)."
@@ -605,7 +605,7 @@ export const dbService = {
    * REFACTORED: Calls a Cloud Function to process the transaction securely.
    * The function will handle user point updates and transaction creation.
    */
-  createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
+  createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status" | "officerId" | "officerName">): Promise<Transaction> => {
     try {
       const processTransaction = httpsCallable(functions, 'processTransaction');
       const result = await processTransaction(txData);
@@ -776,11 +776,10 @@ export const dbService = {
     bookingId: string,
     officerPhotos: string[],
     weightReceived: number,
-    // manualPoints: number | null, // This was the error, it's not needed here
     pointsAwarded: number,
     carbonSaved: number,
     officerId: string,
-    officerName: string,
+    // officerName: string // Dihapus, akan diambil dari server
   ): Promise<Booking | null> => {
     const bookings = EStore.getBookings();
     const idx = bookings.findIndex((b) => b.id === bookingId);
@@ -801,8 +800,8 @@ export const dbService = {
 
     // Create a transaction record linked to this checkin
     await dbService.createTransaction({
-      officerId,
-      officerName,
+      // officerId dan officerName akan diambil dari server
+      // Tidak perlu dikirim dari client
       userId: booking.userId,
       userName: booking.userName,
       itemType: booking.itemName || "E-Waste",

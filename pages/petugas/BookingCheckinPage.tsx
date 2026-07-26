@@ -70,11 +70,7 @@ export function BookingCheckinPage() {
       const scheduled = data.filter((b) => b.status === "scheduled");
 
       // Filter by officer location branch if assigned
-      if (profile?.role === "petugas" && profile.locationId) {
-        setBookings(scheduled.filter((b) => b.locationId === profile.locationId));
-      } else {
-        setBookings(scheduled);
-      }
+      setBookings(scheduled);
     } catch (e) {
       console.error(e);
     } finally {
@@ -238,8 +234,8 @@ export function BookingCheckinPage() {
         weightKg,
         pointsAwarded,
         carbonSaved,
-        profile?.uid || "unknown-officer",
-        profile?.fullName || "Petugas DLH"
+        // officerId dan officerName akan diambil dari server untuk keamanan
+        // Tidak perlu dikirim dari client
       );
 
       if (updated) {

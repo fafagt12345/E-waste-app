@@ -15,7 +15,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Printer,
-  ChevronRight,
   HardHat,
   Barcode
 } from "lucide-react"; import { httpsCallable } from "firebase/functions";
@@ -96,7 +95,6 @@ export function TransactionPage() {
         // Mock camera capture
         await new Promise((resolve) => setTimeout(resolve, 1500));
         finalUrl = fileOrUrl;
-        fileToAnalyze = fileOrUrl;
       } else {
         // Real Cloudinary upload
         finalUrl = await uploadToCloudinary(fileOrUrl);
@@ -180,8 +178,8 @@ export function TransactionPage() {
 
     try {
       const tx = await dbService.createTransaction({
-        officerId: profile?.uid || "unknown-officer", // Ini akan di-override oleh server, tapi bagus untuk konsistensi
-        officerName: profile?.fullName || "Petugas DLH", // Mengirim nama petugas yang sedang login
+        // officerId dan officerName akan diambil dari server untuk keamanan
+        // Tidak perlu dikirim dari client
         userId: scannedUser.uid,
         userName: scannedUser.fullName,
         itemType,
