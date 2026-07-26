@@ -23,6 +23,7 @@ import { functions } from "../../config";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config";
 import { EStore, UserProfile, EItemCategory, dbService } from "../../services/db";
+import { useAuth } from "../../context/AuthContext";
 import { aiService } from "../../services/aiService";
 import { uploadToCloudinary } from "../../services/uploadService";
 import { toast, Toaster } from "sonner";
@@ -36,6 +37,7 @@ const PRESET_DEMO_IMAGES = [
 ];
 
 export function TransactionPage() {
+  const { profile } = useAuth();
   const [step, setStep] = useState<"scan" | "photo" | "analyzing" | "verify" | "receipt">("scan");
 
   // Step 1: Scan States
@@ -179,8 +181,8 @@ export function TransactionPage() {
 
     try {
       const tx = await dbService.createTransaction({
-        officerId: "officer-uid",
-        officerName: "Agus Saputra (Petugas DLH)",
+        officerId: profile?.uid || "unknown-officer",
+        officerName: profile?.fullName || "Petugas DLH",
         userId: scannedUser.uid,
         userName: scannedUser.fullName,
         itemType,

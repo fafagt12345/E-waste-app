@@ -96,15 +96,6 @@ export function BookingCheckinPage() {
     setWeightKg(1.0);
     setManualPoints(null);
     setOfficerPhotos([]);
-
-    // Cek kesiapan user
-    const userRef = doc(db, "users", booking.userId);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists() || !userDoc.data().memberId) {
-      toast.warning("Akun penyetor ini belum siap. Minta pengguna untuk me-refresh halaman profil mereka hingga Member ID muncul.");
-      setActiveBooking(null); // Batalkan proses jika user belum siap
-      return;
-    }
     toast.success(`Check-in dimulai untuk: ${booking.userName}`);
   };
 
