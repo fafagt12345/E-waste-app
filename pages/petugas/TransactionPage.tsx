@@ -18,11 +18,20 @@ import {
   ChevronRight,
   HardHat,
   Barcode
-} from "lucide-react";
+} from "lucide-react"; import { httpsCallable } from "firebase/functions";
+import { functions } from "../../config";
 import { doc, getDoc } from "firebase/firestore";
+<<<<<<< HEAD
 import { db, auth } from "../../config";
 import { dbService, EStore, UserProfile } from "../../services/db";
 import { aiService, AIVisionResult } from "../../services/aiService";
+=======
+import { db } from "../../config";
+import { EStore, UserProfile, EItemCategory, dbService } from "../../services/db";
+import { useAuth } from "../../context/AuthContext";
+import { aiService } from "../../services/aiService";
+import { uploadToCloudinary } from "../../services/uploadService";
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
 import { toast, Toaster } from "sonner";
 
 // Preset images for easy demo selection
@@ -34,12 +43,12 @@ const PRESET_DEMO_IMAGES = [
 ];
 
 export function TransactionPage() {
+  const { profile } = useAuth();
   const [step, setStep] = useState<"scan" | "photo" | "analyzing" | "verify" | "receipt">("scan");
 
   // Step 1: Scan States
   const [scannedUser, setScannedUser] = useState<UserProfile | null>(null);
   const [manualUid, setManualUid] = useState("");
-  const [isUserReady, setIsUserReady] = useState(false); // State baru untuk cek kesiapan user
 
   // Step 2: Photo States
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
@@ -67,6 +76,7 @@ export function TransactionPage() {
   // QR scan triggers
   const handleScanUser = async (user: UserProfile) => {
     setScannedUser(user);
+<<<<<<< HEAD
     setIsUserReady(false); // Reset status kesiapan
 
     try {
@@ -86,6 +96,11 @@ export function TransactionPage() {
       console.error("Firestore permission error when scanning user", error);
       toast.error("Tidak dapat membaca data user karena izin Firestore. Pastikan role petugas dan dokumen user sudah benar.");
     }
+=======
+    // Langsung lanjutkan ke langkah berikutnya tanpa pengecekan.
+    toast.success(`User terpilih: ${user.fullName}`);
+    setStep("photo");
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
   };
 
   const handleManualLookup = async () => {
@@ -98,30 +113,35 @@ export function TransactionPage() {
     }
   };
 
-  // Cloudinary / Photo Upload simulation
+  // Cloudinary / Photo Upload
   const handleImageSelected = async (fileOrUrl: File | string) => {
     setCloudinaryUploading(true);
     setUploadedImageUrl("");
 
-    // Simulate Cloudinary uploading delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    let finalUrl = "";
+    try {
+      if (typeof fileOrUrl === "string") {
+        // Mock camera capture
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        finalUrl = fileOrUrl;
+        fileToAnalyze = fileOrUrl;
+      } else {
+        // Real Cloudinary upload
+        finalUrl = await uploadToCloudinary(fileOrUrl);
+      }
 
-    let url = "";
-    let name = "";
-    if (typeof fileOrUrl === "string") {
-      url = fileOrUrl;
-      name = fileOrUrl.split("/").pop() || "demo.jpg";
-    } else {
-      url = URL.createObjectURL(fileOrUrl);
-      name = fileOrUrl.name;
+      setUploadedImageUrl(finalUrl);
+      toast.success("Foto berhasil diupload ke Cloudinary");
+    } catch (e: any) {
+      toast.error(e.message || "Gagal upload foto");
+      setCloudinaryUploading(false);
+      return;
     }
 
-    setUploadedImageUrl(url);
     setCloudinaryUploading(false);
-    toast.success("Foto berhasil diupload ke Cloudinary");
 
     // Proceed to AI analysis
-    triggerAIAnalysis(fileOrUrl);
+    triggerAIAnalysis(finalUrl);
   };
 
   // AI analysis triggers
@@ -195,8 +215,8 @@ export function TransactionPage() {
       await auth.currentUser.getIdToken(true);
 
       const tx = await dbService.createTransaction({
-        officerId: "officer-uid",
-        officerName: "Agus Saputra (Petugas DLH)",
+        officerId: profile?.uid || "unknown-officer", // Ini akan di-override oleh server, tapi bagus untuk konsistensi
+        officerName: profile?.fullName || "Petugas DLH", // Mengirim nama petugas yang sedang login
         userId: scannedUser.uid,
         userName: scannedUser.fullName,
         itemType,
@@ -341,17 +361,6 @@ export function TransactionPage() {
                 <span className="block text-sm font-bold text-slate-800">{scannedUser?.fullName}</span>
                 <span className="block text-[10px] text-slate-500">{scannedUser?.phoneNumber || "No telepon tidak ada"} • {scannedUser?.address || "Alamat tidak ada"}</span>
               </div>
-              {!isUserReady && (
-                <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 flex items-start gap-2 text-xs">
-                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Akun Belum Siap</span>
-                    <p className="text-[10px] leading-tight">
-                      Minta penyetor untuk membuka halaman profil dan menekan tombol "Muat Ulang Data" hingga Member ID muncul.
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="text-center max-w-md mx-auto space-y-2">
@@ -381,7 +390,7 @@ export function TransactionPage() {
                   id="waste-photo-upload"
                   type="file"
                   accept="image/*"
-                  disabled={cloudinaryUploading || !isUserReady}
+                  disabled={cloudinaryUploading}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleImageSelected(file);
@@ -398,7 +407,7 @@ export function TransactionPage() {
                 {PRESET_DEMO_IMAGES.map((img) => (
                   <button
                     key={img.name}
-                    disabled={cloudinaryUploading || !isUserReady}
+                    disabled={cloudinaryUploading}
                     onClick={() => handleImageSelected(img.url)}
                     className="flex flex-col items-center gap-1 bg-white border rounded-xl p-1.5 hover:border-dlh-green-500 hover:shadow-xs transition-all disabled:opacity-50"
                   >

@@ -20,7 +20,17 @@ export function LoginPage() {
       await loginWithEmail(email, password);
       navigate("/dashboard");
     } catch (err: any) {
-      setError("Email atau password salah. Silakan coba lagi.");
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError("Email atau password salah. Silakan coba lagi.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Terlalu banyak percobaan gagal. Silakan coba lagi nanti.");
+      } else if (err.code === 'auth/invalid-email') {
+        setError("Format email tidak valid.");
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError("Terjadi kesalahan sistem. Silakan coba lagi.");
+      }
     } finally {
       setLoading("idle");
     }

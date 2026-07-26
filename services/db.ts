@@ -1,9 +1,13 @@
 import { db, functions } from "../config";
+<<<<<<< HEAD
 import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+=======
+import { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
 import { httpsCallable } from "firebase/functions";
 
 // Define Roles
-export type Role = "admin" | "petugas" | "user";
+export type Role = "admin" | "user";
 
 export interface UserProfile {
   uid: string;
@@ -187,27 +191,16 @@ const DEFAULT_USERS: UserProfile[] = [
   },
   {
     uid: "officer-uid",
-    email: "petugas@ewaste.com",
-    fullName: "Agus Saputra (Petugas DLH)",
-    role: "petugas",
+    email: "agus.saputra@ewaste.com",
+    fullName: "Agus Saputra (Admin)",
+    role: "admin",
     points: 0,
     carbonReduced: 0,
     badges: [],
     createdAt: "2026-07-01T00:00:00Z",
     locationId: "loc-1",
-    locationName: "Bank Sampah Induk DLH Kota"
-  },
-  {
-    uid: "officer-uid-2",
-    email: "petugas2@ewaste.com",
-    fullName: "Siti Aminah (Petugas Unit Lestari)",
-    role: "petugas",
-    points: 0,
-    carbonReduced: 0,
-    badges: [],
-    createdAt: "2026-07-01T00:00:00Z",
-    locationId: "loc-2",
-    locationName: "Bank Sampah Unit Lestari"
+    locationName: "Bank Sampah Induk DLH Kota",
+    photoProfile: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=500"
   },
   {
     uid: "user-uid",
@@ -219,7 +212,8 @@ const DEFAULT_USERS: UserProfile[] = [
     badges: ["Green Champion", "Eco Hero"],
     phoneNumber: "0812-3456-7890",
     address: "Jl. Kenanga Indah No.23, Kota",
-    createdAt: "2026-07-02T10:00:00Z"
+    createdAt: "2026-07-02T10:00:00Z",
+    photoProfile: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500"
   },
   {
     uid: "user-dewi",
@@ -231,7 +225,8 @@ const DEFAULT_USERS: UserProfile[] = [
     badges: ["Eco Starter"],
     phoneNumber: "0813-9876-5432",
     address: "Jl. Melati Harum No.89, Kota",
-    createdAt: "2026-07-03T11:00:00Z"
+    createdAt: "2026-07-03T11:00:00Z",
+    photoProfile: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500"
   },
   {
     uid: "user-bambang",
@@ -243,7 +238,8 @@ const DEFAULT_USERS: UserProfile[] = [
     badges: [],
     phoneNumber: "0857-4433-2211",
     address: "Jl. Dahlia Baru No.12, Kota",
-    createdAt: "2026-07-04T12:00:00Z"
+    createdAt: "2026-07-04T12:00:00Z",
+    photoProfile: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=500"
   }
 ];
 
@@ -252,7 +248,7 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
     id: "tx-1001",
     date: "2026-07-10T14:32:00Z",
     officerId: "officer-uid",
-    officerName: "Agus Saputra (Petugas DLH)",
+    officerName: "Agus Saputra (Admin)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Laptop",
@@ -271,7 +267,7 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
     id: "tx-1002",
     date: "2026-07-15T09:15:00Z",
     officerId: "officer-uid",
-    officerName: "Agus Saputra (Petugas DLH)",
+    officerName: "Agus Saputra (Admin)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Smartphone",
@@ -290,7 +286,7 @@ const DEFAULT_TRANSACTIONS: Transaction[] = [
     id: "tx-1003",
     date: "2026-07-18T11:20:00Z",
     officerId: "officer-uid",
-    officerName: "Agus Saputra (Petugas DLH)",
+    officerName: "Agus Saputra (Admin)",
     userId: "user-uid",
     userName: "Rian Wijaya (Eco Hero)",
     itemType: "Keyboard",
@@ -375,8 +371,8 @@ const DEFAULT_AUDIT_LOGS: AuditLog[] = [
     id: "log-2",
     timestamp: "2026-07-10T14:32:00Z",
     userId: "officer-uid",
-    userName: "Agus Saputra",
-    userRole: "petugas",
+    userName: "Agus Saputra (Admin)",
+    userRole: "admin",
     action: "Input Transaksi",
     details: "Mencatat setoran e-waste Laptop Asus dari Rian Wijaya (tx-1001)."
   },
@@ -448,6 +444,83 @@ export class EStore {
 // FIREBASE FIRESTORE ADAPTER (with offline-fallback & localStorage syncing)
 // -------------------------------------------------------------
 export const dbService = {
+  // REALTIME SUBSCRIPTIONS
+  subscribeUsers: (callback: (users: UserProfile[]) => void) => {
+    return onSnapshot(collection(db, "users"), (snap) => {
+      const users: UserProfile[] = [];
+      snap.forEach((doc) => users.push(doc.data() as UserProfile));
+      const localUsers = EStore.getUsers();
+      const mergedMap = new Map();
+      localUsers.forEach(u => mergedMap.set(u.uid, u));
+      users.forEach(u => mergedMap.set(u.uid, u));
+      const finalUsers = Array.from(mergedMap.values());
+      EStore.saveUsers(finalUsers);
+      callback(finalUsers);
+    }, (error) => {
+      console.warn("Subscribe users error:", error);
+      callback(EStore.getUsers());
+    });
+  },
+
+  subscribeTransactions: (callback: (txs: Transaction[]) => void) => {
+    return onSnapshot(collection(db, "transactions"), (snap) => {
+      const txs: Transaction[] = [];
+      snap.forEach((doc) => txs.push(doc.data() as Transaction));
+      const localTxs = EStore.getTransactions();
+      const mergedMap = new Map();
+      localTxs.forEach(t => mergedMap.set(t.id, t));
+      txs.forEach(t => mergedMap.set(t.id, t));
+      const finalTxs = Array.from(mergedMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      EStore.saveTransactions(finalTxs);
+      callback(finalTxs);
+    }, (error) => {
+      console.warn("Subscribe transactions error:", error);
+      callback(EStore.getTransactions());
+    });
+  },
+
+  subscribeBookings: (callback: (bookings: Booking[]) => void) => {
+    return onSnapshot(collection(db, "bookings"), (snap) => {
+      const list: Booking[] = [];
+      snap.forEach((doc) => list.push(doc.data() as Booking));
+      if (list.length > 0) {
+        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        EStore.saveBookings(list);
+        callback(list);
+      } else {
+        const local = EStore.getBookings();
+        local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        callback(local);
+      }
+    }, (error) => {
+      console.warn("Subscribe bookings error:", error);
+      const local = EStore.getBookings();
+      local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      callback(local);
+    });
+  },
+
+  subscribeAnnouncements: (callback: (news: Announcement[]) => void) => {
+    return onSnapshot(collection(db, "announcements"), (snap) => {
+      const list: Announcement[] = [];
+      snap.forEach((doc) => list.push(doc.data() as Announcement));
+      if (list.length > 0) {
+        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        EStore.saveNews(list);
+        callback(list);
+      } else {
+        const local = EStore.getNews();
+        local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        callback(local);
+      }
+    }, (error) => {
+      console.warn("Subscribe announcements error:", error);
+      const local = EStore.getNews();
+      local.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      callback(local);
+    });
+  },
+
   // AUDIT LOGGING
   addAuditLog: async (userId: string, userName: string, role: string, action: string, details: string) => {
     const newLog: AuditLog = {
@@ -540,7 +613,6 @@ export const dbService = {
   createTransaction: async (txData: Omit<Transaction, "id" | "date" | "status">): Promise<Transaction> => {
     try {
       const processTransaction = httpsCallable(functions, 'processTransaction');
-
       const result = await processTransaction(txData);
       const newTx = result.data as Transaction;
 
@@ -661,19 +733,43 @@ export const dbService = {
 
   // BOOKINGPENYETORAN
   getBookings: async (): Promise<Booking[]> => {
-    return EStore.getBookings();
+    try {
+      const snap = await getDocs(collection(db, "bookings"));
+      const list: Booking[] = [];
+      snap.forEach((doc) => {
+        list.push(doc.data() as Booking);
+      });
+      if (list.length > 0) {
+        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        EStore.saveBookings(list);
+        return list;
+      }
+    } catch (e) {
+      console.warn("Firestore bookings fetch failed. Using local storage.", e);
+    }
+    const list = EStore.getBookings();
+    list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return list;
   },
 
   createBooking: async (booking: Omit<Booking, "id" | "status">): Promise<Booking> => {
-    const bookings = EStore.getBookings();
     const newBooking: Booking = {
       ...booking,
       id: `b-${Date.now()}`,
       status: "scheduled",
       officerPhotos: []
     };
+
+    const bookings = EStore.getBookings();
     bookings.unshift(newBooking);
     EStore.saveBookings(bookings);
+
+    try {
+      await setDoc(doc(db, "bookings", newBooking.id), newBooking);
+    } catch (e) {
+      console.warn("Firestore save booking failed.", e);
+      throw new Error("Gagal menyimpan ke database. Pastikan koneksi internet stabil.");
+    }
 
     // Add Audit Log
     await dbService.addAuditLog(booking.userId, booking.userName, "user", "Booking Penyetoran", `Membuat jadwal penyetoran e-waste pada ${booking.date} (${booking.timeSlot}) di ${booking.locationName}.`);
@@ -689,7 +785,7 @@ export const dbService = {
     pointsAwarded: number,
     carbonSaved: number,
     officerId: string,
-    officerName: string
+    officerName: string,
   ): Promise<Booking | null> => {
     const bookings = EStore.getBookings();
     const idx = bookings.findIndex((b) => b.id === bookingId);

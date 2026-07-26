@@ -14,6 +14,7 @@ service cloud.firestore {
         request.auth.token.role == 'admin' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
+<<<<<<< HEAD
     }
 
     // Helper function to check if the requesting user is a petugas (officer)
@@ -22,6 +23,8 @@ service cloud.firestore {
         request.auth.token.role == 'petugas' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas'
       );
+=======
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
     }
 
     // --- Collection Rules ---
@@ -32,7 +35,11 @@ service cloud.firestore {
     // - Admins and Petugas can read any user's profile.
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
+<<<<<<< HEAD
       allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() || isPetugas();
+=======
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+>>>>>>> d4c12fb6984e98416cb886d199d737da2be2dbcc
       allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       // No one can delete user documents from the client-side
       allow delete: if false;
@@ -43,8 +50,8 @@ service cloud.firestore {
     // - Users can read their own transactions.
     // - Admins and Petugas can read all transactions.
     match /transactions/{transactionId} {
-      allow create: if isPetugas();
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin() || isPetugas();
+      allow create: if isAdmin();
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
       allow update, delete: if isAdmin(); // Only admins can modify/delete transactions
     }
 
@@ -54,8 +61,8 @@ service cloud.firestore {
     // - Petugas can read all bookings and update their status.
     match /bookings/{bookingId} {
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isPetugas() || isAdmin();
-      allow update: if isPetugas() || isAdmin();
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
