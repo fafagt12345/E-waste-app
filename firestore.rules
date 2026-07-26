@@ -16,14 +16,6 @@ service cloud.firestore {
       );
     }
 
-    // Helper function to check if the requesting user is a petugas (officer)
-    function isPetugas() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'petugas' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas'
-      );
-    }
-
     // --- Collection Rules ---
 
     // Users Collection:
@@ -32,7 +24,7 @@ service cloud.firestore {
     // - Admins and Petugas can read any user's profile.
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow read: if (isAuthenticated() && request.auth.uid == userId) || isPetugas() || isAdmin(); // Corrected to ensure proper role check
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       // No one can delete user documents from the client-side
       allow delete: if false;
@@ -43,8 +35,8 @@ service cloud.firestore {
     // - Users can read their own transactions.
     // - Admins and Petugas can read all transactions.
     match /transactions/{transactionId} {
-      allow create: if isPetugas();
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin() || isPetugas();
+      allow create: if isAdmin();
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
       allow update, delete: if isAdmin(); // Only admins can modify/delete transactions
     }
 
@@ -54,8 +46,8 @@ service cloud.firestore {
     // - Petugas can read all bookings and update their status.
     match /bookings/{bookingId} {
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isPetugas() || isAdmin();
-      allow update: if isPetugas() || isAdmin();
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -74,6 +66,6 @@ service cloud.firestore {
 
     // Settings should be admin only. Audit logs may be written by petugas and admins.
     match /settings/{settingId} { allow read, write: if isAdmin(); }
-    match /audit_logs/{logId} { allow read, write: if isAdmin() || isPetugas(); }
+    match /audit_logs/{logId} { allow read, write: if isAdmin(); }
   }
 }
