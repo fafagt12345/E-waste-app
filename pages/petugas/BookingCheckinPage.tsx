@@ -238,8 +238,8 @@ export function BookingCheckinPage() {
         weightKg,
         pointsAwarded,
         carbonSaved,
-        profile?.uid || "officer-uid",
-        profile?.fullName || "Agus Saputra (Petugas DLH)"
+        profile?.uid || "unknown-officer",
+        profile?.fullName || "Petugas DLH"
       );
 
       if (updated) {

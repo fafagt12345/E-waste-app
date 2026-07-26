@@ -32,7 +32,7 @@ service cloud.firestore {
     // - Admins and Petugas can read any user's profile.
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() || isPetugas();
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isPetugas() || isAdmin();
       allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       // No one can delete user documents from the client-side
       allow delete: if false;

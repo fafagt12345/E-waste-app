@@ -181,8 +181,8 @@ export function TransactionPage() {
 
     try {
       const tx = await dbService.createTransaction({
-        officerId: profile?.uid || "unknown-officer",
-        officerName: profile?.fullName || "Petugas DLH",
+        officerId: profile?.uid || "unknown-officer", // Ini akan di-override oleh server, tapi bagus untuk konsistensi
+        officerName: profile?.fullName || "Petugas DLH", // Mengirim nama petugas yang sedang login
         userId: scannedUser.uid,
         userName: scannedUser.fullName,
         itemType,
